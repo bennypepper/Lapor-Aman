@@ -37,8 +37,8 @@ lapor-judol-platform/
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/lapor-judol-platform.git
-   cd lapor-judol-platform
+   git clone https://github.com/bennypepper/Lapor-Aman.git
+   cd lapor-aman
    ```
 
 2. **Serve the application:**
@@ -51,4 +51,4 @@ lapor-judol-platform/
    *Then navigate to `http://localhost:8000` in your browser.*
 
 3. **Admin Access:**
-   To access the admin panel and decrypt the mock data, log in with the authorized staff email and use the decryption key: `LaporAman2025`.
+   To access the admin panel and decrypt the mock data, log in with the authorized staff email and use the decryption key that you've set.
