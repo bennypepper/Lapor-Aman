@@ -1,0 +1,159 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0f172a; /* slate-900 */
+    color: #cbd5e1; /* slate-300 */
+}
+.gradient-text {
+    background: linear-gradient(90deg, #22d3ee, #0ea5e9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+.card-bg {
+    background-color: rgba(30, 41, 59, 0.5); /* slate-800 with opacity */
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(51, 65, 85, 0.5); /* slate-700 with opacity */
+}
+.btn-primary {
+    background: linear-gradient(90deg, #0ea5e9, #22d3ee);
+}
+.faq-question {
+    transition: background-color 0.3s ease;
+}
+.faq-answer {
+    transition: max-height 0.5s ease-in-out;
+    max-height: 0;
+    overflow: hidden;
+}
+.faq-question.active + .faq-answer {
+    max-height: 200px; /* Adjust as needed */
+}
+.faq-question .icon-plus {
+     transform: rotate(0deg);
+     transition: transform 0.3s ease;
+}
+ .faq-question.active .icon-plus {
+    transform: rotate(45deg);
+}
+
+/* Custom scrollbar for chat */
+#chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+  background-color: #334155; /* slate-700 */
+  border-radius: 20px;
+}
+
+/* Loading Spinner */
+.loader {
+  width: 50px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 8px solid #0000;
+  border-right-color: #22d3ee;
+  position: relative;
+  animation: l24 1s infinite linear;
+}
+.loader:before,
+.loader:after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: inherit;
+  animation: inherit;
+  animation-duration: 2s;
+}
+.loader:after {
+  animation-duration: 4s;
+}
+@keyframes l24 {
+  100% {transform: rotate(1turn)}
+}
+
+/* --- TOAST NOTIFICATION --- */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.toast {
+    background-color: #1e293b;
+    border-left: 4px solid #0ea5e9;
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    transform: translateX(100%);
+    animation: slideIn 0.3s forwards, fadeOut 0.5s 4.5s forwards;
+}
+.toast.error { border-left-color: #ef4444; }
+.toast.success { border-left-color: #22c55e; }
+
+@keyframes slideIn {
+    to { transform: translateX(0); }
+}
+@keyframes fadeOut {
+    to { opacity: 0; pointer-events: none; }
+}
+
+/* --- SCROLL TO TOP --- */
+#scroll-to-top {
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+/* --- LIGHTBOX (ADMIN) --- */
+#image-modal {
+    transition: opacity 0.3s ease;
+}
+#image-modal img {
+    max-height: 85vh;
+    max-width: 90vw;
+}
+
+/* --- CHAT MARKDOWN STYLES (Wajib Ada untuk Chatbot Rapi) --- */
+.chat-bubble {
+    line-height: 1.5;
+}
+.chat-bubble p {
+    margin-bottom: 0.75rem; /* Jarak antar paragraf */
+}
+.chat-bubble p:last-child {
+    margin-bottom: 0;
+}
+.chat-bubble strong {
+    font-weight: 700;
+    color: #22d3ee; /* Warna Cyan Bold */
+}
+.chat-bubble ul {
+    list-style-type: disc;
+    margin-left: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+.chat-bubble ol {
+    list-style-type: decimal;
+    margin-left: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+.chat-bubble li {
+    margin-bottom: 0.25rem;
+}
+.chat-bubble a {
+    color: #38bdf8;
+    text-decoration: underline;
+}

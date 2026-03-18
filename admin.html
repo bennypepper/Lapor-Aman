@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - LaporAman</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Crypto JS untuk Dekripsi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="antialiased">
+
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center">
+        <div class="loader"></div>
+    </div>
+
+    <header class="card-bg shadow-lg">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white">
+                Admin<span class="gradient-text">Panel</span>
+            </h1>
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-sm hover:text-cyan-400 transition-colors">Lihat Website</a>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-500 text-white font-medium py-2 px-4 rounded-lg">Keluar</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        
+        <!-- Login Gate -->
+        <div id="auth-gate" class="text-center py-20">
+            <h2 class="text-2xl font-bold text-white">Akses Ditolak</h2>
+            <p class="text-slate-400 mt-2">Anda harus login sebagai admin.</p>
+            <a href="index.html" class="mt-6 inline-block btn-primary text-white py-2 px-6 rounded-full">Login</a>
+        </div>
+
+        <!-- Admin Content -->
+        <div id="admin-content" class="hidden">
+            
+            <!-- Tabs -->
+            <div class="flex space-x-4 mb-6 border-b border-slate-700 pb-2">
+                <button id="tab-reports" class="px-4 py-2 text-cyan-400 border-b-2 border-cyan-400 font-semibold">Laporan Masuk</button>
+                <button id="tab-users" class="px-4 py-2 text-slate-400 hover:text-white transition">Data Pengguna</button>
+            </div>
+
+            <!-- REPORTS VIEW -->
+            <div id="view-reports">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">Daftar Laporan</h2>
+                    <button id="download-csv" class="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export CSV
+                    </button>
+                </div>
+                <div class="card-bg rounded-lg overflow-hidden overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-300">
+                        <thead class="text-xs text-slate-400 uppercase bg-slate-700/50">
+                            <tr>
+                                <th class="px-6 py-3">Tiket</th>
+                                <th class="px-6 py-3">Waktu</th>
+                                <th class="px-6 py-3">URL</th>
+                                <th class="px-6 py-3">Pelapor</th>
+                                <th class="px-6 py-3">Bukti</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- USERS VIEW -->
+            <div id="view-users" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">Data Pengguna Terdaftar</h2>
+                    <!-- Tombol Dekripsi -->
+                    <div class="flex gap-2">
+                        <input type="password" id="decryption-key-input" placeholder="Masukkan Kunci Enkripsi" class="bg-slate-900 border border-slate-600 text-white px-3 py-2 rounded-lg text-sm">
+                        <button id="decrypt-btn" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                            <i data-lucide="lock-open" class="w-4 h-4"></i> Buka Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-bg rounded-lg overflow-hidden overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-300">
+                        <thead class="text-xs text-slate-400 uppercase bg-slate-700/50">
+                            <tr>
+                                <th class="px-6 py-3">Nama Lengkap (KTP)</th>
+                                <th class="px-6 py-3">NIK</th>
+                                <th class="px-6 py-3">Username</th>
+                                <th class="px-6 py-3">Email</th>
+                                <th class="px-6 py-3">No. HP</th>
+                                <th class="px-6 py-3">Alamat</th>
+                                <th class="px-6 py-3">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr><td colspan="7" class="text-center py-4">Masukkan kunci enkripsi untuk memuat data.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- History Container -->
+                <div id="user-history-container" class="mt-8 hidden">
+                    <h3 class="text-lg font-bold text-white mb-4">Riwayat Laporan: <span id="history-username" class="text-cyan-400"></span></h3>
+                    <div class="card-bg rounded-lg p-4" id="history-content"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- LIGHTBOX MODAL -->
+    <div id="image-modal" class="hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4">
+        <button id="close-image-modal" class="absolute top-4 right-4 text-white hover:text-gray-300">
+            <i data-lucide="x" class="w-8 h-8"></i>
+        </button>
+        <img id="modal-img-content" src="" alt="Bukti Laporan" class="rounded-lg shadow-2xl object-contain">
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+      
+      const firebaseConfig = {
+        apiKey: "AIzaSyDuP65g_gbrsyRgTZ2Q5aUHVD8dHQpQJd4",
+        authDomain: "proyek-web-lapor-judol.firebaseapp.com",
+        projectId: "proyek-web-lapor-judol",
+        storageBucket: "proyek-web-lapor-judol.firebasestorage.app",
+        messagingSenderId: "403825393417",
+        appId: "1:403825393417:web:ad84314bf8248f88b59dd8",
+        measurementId: "G-TCS3WW5RQ1"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      
+      window.firebaseAdminServices = {
+          auth: getAuth(app),
+          db: getFirestore(app),
+          authMethods: { onAuthStateChanged, signOut },
+          dbMethods: { collection, getDocs, doc, updateDoc, deleteDoc, query, where, arrayUnion }
+      };
+    </script>
+    <script src="admin.js" defer></script>
+</body>
+</html>
