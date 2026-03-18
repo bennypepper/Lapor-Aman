@@ -24,12 +24,12 @@ Protecting reporter identity is the highest priority when reporting cybercrime. 
 ## 📂 Repository Structure
 ```text
 lapor-judol-platform/
-├── firebase.json          # Firebase deployment configuration[cite: 16]
-├── index.html             # Main reporting interface[cite: 17]
-├── admin.html             # Protected admin dashboard[cite: 14]
-├── script.js              # Core logic, encryption, and AI integration[cite: 18]
-├── admin.js               # Admin data management and CSV export[cite: 15]
-├── style.css              # Custom styling and animations[cite: 19]
+├── firebase.json          # Firebase deployment configuration
+├── index.html             # Main reporting interface
+├── admin.html             # Protected admin dashboard
+├── script.js              # Core logic, encryption, and AI integration
+├── admin.js               # Admin data management and CSV export
+├── style.css              # Custom styling and animations
 └── README.md
 ```
 
