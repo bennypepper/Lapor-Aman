@@ -1,4 +1,4 @@
-# LaporAman: Secure Online Gambling Reporting Platform 🛡️
+# LaporAman: Secure Online Gambling Reporting Platform 
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white) ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black) ![Gemini AI](https://img.shields.io/badge/Gemini_AI-8E75B2?style=flat&logo=googlebard&logoColor=white) ![Security](https://img.shields.io/badge/AES--256-Encrypted-success.svg)
 
