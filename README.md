@@ -1,4 +1,4 @@
-# LaporAman: Secure Online Gambling Reporting Platform 🛡️
+# LaporAman: Secure Online Gambling Reporting Platform 
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white) ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black) ![Gemini AI](https://img.shields.io/badge/Gemini_AI-8E75B2?style=flat&logo=googlebard&logoColor=white) ![Security](https://img.shields.io/badge/AES--256-Encrypted-success.svg)
 
@@ -24,12 +24,12 @@ Protecting reporter identity is the highest priority when reporting cybercrime. 
 ## 📂 Repository Structure
 ```text
 lapor-judol-platform/
-├── firebase.json          # Firebase deployment configuration[cite: 16]
-├── index.html             # Main reporting interface[cite: 17]
-├── admin.html             # Protected admin dashboard[cite: 14]
-├── script.js              # Core logic, encryption, and AI integration[cite: 18]
-├── admin.js               # Admin data management and CSV export[cite: 15]
-├── style.css              # Custom styling and animations[cite: 19]
+├── firebase.json          # Firebase deployment configuration
+├── index.html             # Main reporting interface
+├── admin.html             # Protected admin dashboard
+├── script.js              # Core logic, encryption, and AI integration
+├── admin.js               # Admin data management and CSV export
+├── style.css              # Custom styling and animations
 └── README.md
 ```
 
@@ -37,8 +37,8 @@ lapor-judol-platform/
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/lapor-judol-platform.git
-   cd lapor-judol-platform
+   git clone https://github.com/bennypepper/Lapor-Aman.git
+   cd lapor-aman
    ```
 
 2. **Serve the application:**
@@ -51,4 +51,4 @@ lapor-judol-platform/
    *Then navigate to `http://localhost:8000` in your browser.*
 
 3. **Admin Access:**
-   To access the admin panel and decrypt the mock data, log in with the authorized staff email and use the decryption key: `LaporAman2025`.
+   To access the admin panel and decrypt the mock data, log in with the authorized staff email and use the decryption key that you've set.
