@@ -8,10 +8,10 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts: Inter -->
+    <!-- Google Fonts: Inter & JetBrains Mono for Technical vibe -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <!-- Icons: Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -30,191 +30,305 @@
 
     <!-- Custom Style -->
     <link rel="stylesheet" href="style.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
 </head>
 <body class="antialiased flex flex-col min-h-screen">
 
     <!-- Loading Overlay -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center">
-        <div class="loader"></div>
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] flex items-center justify-center">
+        <div class="flex flex-col items-center gap-4">
+            <div class="loader"></div>
+            <span class="text-xs font-mono text-cyan-400 uppercase tracking-widest">Memuat...</span>
+        </div>
     </div>
 
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
     <!-- Scroll To Top Button -->
-    <button id="scroll-to-top" class="fixed bottom-24 right-6 btn-primary p-3 rounded-full shadow-lg z-40 opacity-0 translate-y-10 pointer-events-none hover:shadow-cyan-500/50 transition-all duration-300">
-        <i data-lucide="arrow-up" class="w-6 h-6 text-white"></i>
+    <button id="scroll-to-top" class="fixed bottom-24 right-6 bg-slate-800 border border-slate-600 p-3 rounded-md shadow-lg z-40 opacity-0 translate-y-10 pointer-events-none hover:bg-slate-700 hover:border-cyan-500 transition-all duration-300">
+        <i data-lucide="arrow-up" class="w-5 h-5 text-white"></i>
     </button>
 
     <!-- Header -->
-    <header id="header" class="sticky top-0 z-50 card-bg shadow-lg">
+    <header id="header" class="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="#" class="text-2xl font-bold text-white">
-                Lapor<span class="gradient-text">Aman</span>
+            <a href="#" class="flex items-center gap-3 group">
+                <!-- Logo Meridian Digital -->
+                <img src="logo.png" alt="Meridian Digital Logo" class="h-14 w-auto object-contain">
+                <span class="text-xl font-bold text-white tracking-tight">
+                    Lapor<span class="text-cyan-400">Aman</span>
+                </span>
             </a>
-            <nav class="hidden md:flex space-x-8 items-center">
-                <a href="#hero" class="hover:text-cyan-400 transition-colors duration-300">Beranda</a>
-                <a href="#lacak" class="hover:text-cyan-400 transition-colors duration-300">Lacak Laporan</a>
-                <a href="#faq" class="hover:text-cyan-400 transition-colors duration-300">FAQ</a>
-                <a href="admin.html" id="admin-dashboard-link" class="hidden bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300">Dashboard Admin</a>
-                <button id="auth-nav-button" class="bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300">Masuk / Daftar</button>
+            <nav class="hidden md:flex space-x-8 items-center text-sm font-medium">
+                <a href="#hero" class="text-slate-300 hover:text-cyan-400 transition-colors duration-300">Beranda</a>
+                <a href="#lacak" class="text-slate-300 hover:text-cyan-400 transition-colors duration-300">Lacak Tiket</a>
+                <a href="#faq" class="text-slate-300 hover:text-cyan-400 transition-colors duration-300">FAQ</a>
+                <a href="admin.html" id="admin-dashboard-link" class="hidden text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors duration-300">
+                    <i data-lucide="terminal" class="w-4 h-4"></i> Dashboard Admin
+                </a>
+                <div class="w-px h-6 bg-slate-700"></div>
+                <button id="auth-nav-button" class="btn-primary font-bold py-2 px-5">Masuk / Daftar</button>
             </nav>
-            <button id="mobile-menu-button" class="md:hidden text-white">
+            <button id="mobile-menu-button" class="md:hidden text-slate-300 hover:text-white">
                 <i data-lucide="menu"></i>
             </button>
         </div>
         <!-- Mobile Menu -->
-        <div id="mobile-menu" class="hidden md:hidden px-6 pb-4">
-            <a href="#hero" class="block py-2 text-center hover:bg-slate-700 rounded-lg">Beranda</a>
-            <a href="#lacak" class="block py-2 text-center hover:bg-slate-700 rounded-lg">Lacak Laporan</a>
-            <a href="#faq" class="block py-2 text-center hover:bg-slate-700 rounded-lg">FAQ</a>
-            <a href="admin.html" id="admin-dashboard-link-mobile" class="hidden w-full block py-2 text-center mt-2 bg-amber-600 hover:bg-amber-500 rounded-lg">Dashboard Admin</a>
-            <button id="auth-nav-button-mobile" class="w-full block py-2 text-center mt-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg">Masuk / Daftar</button>
+        <div id="mobile-menu" class="hidden md:hidden px-6 pb-6 bg-slate-900 border-t border-slate-800">
+            <a href="#hero" class="block py-3 text-sm font-medium text-slate-300 border-b border-slate-800">Beranda</a>
+            <a href="#lacak" class="block py-3 text-sm font-medium text-slate-300 border-b border-slate-800">Lacak Tiket</a>
+            <a href="#faq" class="block py-3 text-sm font-medium text-slate-300 border-b border-slate-800">FAQ</a>
+            <a href="admin.html" id="admin-dashboard-link-mobile" class="hidden block py-3 text-sm font-medium text-amber-500 border-b border-slate-800">Dashboard Admin</a>
+            <button id="auth-nav-button-mobile" class="w-full mt-4 btn-primary font-bold py-3">Masuk / Daftar</button>
         </div>
     </header>
 
     <!-- Main Content -->
     <main class="flex-grow">
         <!-- Hero Section -->
-        <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden">
-             <div class="absolute inset-0 bg-slate-900 opacity-50 z-10"></div>
-             <div class="absolute inset-0 z-0">
-                <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse"></div>
-                <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse delay-1000"></div>
+        <section id="hero" class="relative min-h-[90vh] flex items-center pt-12 pb-20 overflow-hidden">
+            <div class="container mx-auto px-6 relative z-10">
+                <div class="grid lg:grid-cols-12 gap-12 items-center">
+                    
+                    <div class="lg:col-span-7 text-left">
+                        <div class="inline-flex items-center gap-2 border border-cyan-800/50 bg-cyan-950/30 px-3 py-1.5 rounded text-xs text-cyan-400 font-mono tracking-widest mb-6">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                            PLATFORM PELAPORAN AMAN
+                        </div>
+                        <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight mb-6 tracking-tighter">
+                            Berantas Kejahatan <br />
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Judi Online.</span>
+                        </h1>
+                        <p class="text-lg text-slate-400 mb-8 max-w-xl leading-relaxed">
+                            Platform pengaduan masyarakat dengan keamanan <strong class="text-slate-200">enkripsi end-to-end</strong>. Identitas pelapor dijamin aman dan rahasia. Mari bersihkan ruang digital Indonesia bersama-sama.
+                        </p>
+                        
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <a href="#report-section-wrapper" class="btn-primary py-3.5 px-8 flex items-center justify-center gap-2">
+                                <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                                Buat Laporan
+                            </a>
+                            <a href="#lacak" class="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-white font-bold py-3.5 px-8 rounded-md flex items-center justify-center gap-2 transition-colors uppercase tracking-wide text-sm">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                Lacak Tiket
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Right Side Abstract Tech Graphic -->
+                    <div class="hidden lg:flex lg:col-span-5 justify-center relative">
+                        <div class="relative w-[400px] h-[400px]">
+                            <!-- Outer rotating border -->
+                            <div class="absolute inset-0 border border-slate-700/50 rounded-full border-t-cyan-500/50 animate-[spin_40s_linear_infinite]"></div>
+                            <!-- Inner rotating border -->
+                            <div class="absolute inset-8 border border-slate-800 rounded-full border-b-blue-500/30 animate-[spin_30s_linear_infinite_reverse]"></div>
+                            
+                            <!-- Central Hub -->
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="w-32 h-32 rounded-full bg-slate-900 border border-cyan-500/30 shadow-[0_0_30px_rgba(34,211,238,0.15)] flex items-center justify-center relative z-20">
+                                    <i data-lucide="lock" class="w-12 h-12 text-cyan-400"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Floating Data Points -->
+                            <div class="absolute top-12 left-0 card-bg p-3 rounded flex items-center gap-3">
+                                <i data-lucide="file-key" class="w-4 h-4 text-emerald-400"></i>
+                                <span class="text-xs font-mono text-slate-300">Data Dienkripsi</span>
+                            </div>
+                            <div class="absolute bottom-16 right-0 card-bg p-3 rounded flex items-center gap-3">
+                                <i data-lucide="server" class="w-4 h-4 text-blue-400"></i>
+                                <span class="text-xs font-mono text-slate-300">Server Aman</span>
+                            </div>
+                            <div class="absolute top-1/2 -right-8 card-bg p-3 rounded flex items-center gap-3">
+                                <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                <span class="text-xs font-mono text-slate-300">Dipantau 24/7</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
-            <div class="container mx-auto px-6 text-center z-20">
-                <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">
-                    Laporkan Aktivitas Judi Online. <span class="gradient-text">Aman & Terpercaya.</span>
-                </h1>
-                <p class="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto mb-8">
-                    Buat akun untuk melaporkan situs atau konten ilegal secara aman. Laporan Anda diproses secara transparan dan dapat dilacak.
-                </p>
-                <a href="#report-section-wrapper" class="btn-primary text-white font-bold py-3 px-8 rounded-full text-lg hover:shadow-lg hover:shadow-cyan-500/50 transform hover:-translate-y-1 transition-all duration-300">
-                    Mulai Lapor Sekarang
-                </a>
-            </div>
+            
+            <!-- Bottom Fade -->
+            <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#030712] to-transparent"></div>
         </section>
 
         <!-- Trusted By Section -->
-        <section class="py-12 bg-slate-950/50">
+        <section class="py-10 border-y border-slate-800/50 bg-slate-900/30">
             <div class="container mx-auto px-6">
-                <h3 class="text-center text-slate-400 text-sm font-semibold uppercase tracking-wider">Dipercaya dan Didukung Penuh Oleh</h3>
-                <div class="flex justify-center items-center mt-6 space-x-8 md:space-x-12">
-                    <a href="https://www.komdigi.go.id/" target="_blank" rel="noopener noreferrer">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Logo_Kementerian_Komunikasi_dan_Digital_Republik_Indonesia_%282024_full_version%29.svg/2397px-Logo_Kementerian_Komunikasi_dan_Digital_Republik_Indonesia_%282024_full_version%29.svg.png" alt="Logo Komdigi" class="h-16 md:h-20 grayscale hover:grayscale-0 transition duration-300" onerror="this.onerror=null;this.src='https://placehold.co/200x80/0f172a/94a3b8?text=Logo+Komdigi';">
-                    </a>
-                    <a href="https://polri.go.id/" target="_blank" rel="noopener noreferrer">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6e/Lambang_Polri.png" alt="Logo POLRI" class="h-16 md:h-20 grayscale hover:grayscale-0 transition duration-300" onerror="this.onerror=null;this.src='https://placehold.co/80x80/0f172a/94a3b8?text=Logo+POLRI';">
-                    </a>
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <h3 class="text-xs font-mono text-slate-500 uppercase tracking-[0.2em]">Didukung penuh oleh:</h3>
+                    <div class="flex items-center gap-8 md:gap-12">
+                        <a href="https://www.komdigi.go.id/" target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Logo_Kementerian_Komunikasi_dan_Digital_Republik_Indonesia_%282024_full_version%29.svg/960px-Logo_Kementerian_Komunikasi_dan_Digital_Republik_Indonesia_%282024_full_version%29.svg.png" alt="Logo Komdigi" class="h-10 md:h-12 grayscale">
+                        </a>
+                        <a href="https://polri.go.id/" target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6e/Lambang_Polri.png" alt="Logo POLRI" class="h-10 md:h-12 grayscale">
+                        </a>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Stats Section -->
-        <section class="py-20">
+        <section class="py-20 relative">
             <div class="container mx-auto px-6">
-                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    <div>
-                        <h2 id="stats-blocked" class="text-5xl font-bold gradient-text">400+</h2>
-                        <p class="text-slate-400 mt-2">Situs Telah Diblokir</p>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card-bg p-8 rounded-lg text-center relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-cyan-500/20 group-hover:bg-cyan-400 transition-colors"></div>
+                        <i data-lucide="ban" class="w-6 h-6 text-slate-600 mb-4 mx-auto group-hover:text-cyan-400 transition-colors"></i>
+                        <h2 id="stats-blocked" class="text-4xl font-mono font-bold text-white tracking-tighter">400+</h2>
+                        <p class="text-xs font-mono text-slate-400 mt-2 uppercase tracking-widest">Situs Diblokir</p>
                     </div>
-                     <div>
-                        <h2 id="stats-processed" class="text-5xl font-bold gradient-text">1.500+</h2>
-                        <p class="text-slate-400 mt-2">Laporan Telah Diproses</p>
+                     <div class="card-bg p-8 rounded-lg text-center relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-blue-500/20 group-hover:bg-blue-400 transition-colors"></div>
+                        <i data-lucide="file-check-2" class="w-6 h-6 text-slate-600 mb-4 mx-auto group-hover:text-blue-400 transition-colors"></i>
+                        <h2 id="stats-processed" class="text-4xl font-mono font-bold text-white tracking-tighter">1.500+</h2>
+                        <p class="text-xs font-mono text-slate-400 mt-2 uppercase tracking-widest">Laporan Diproses</p>
                     </div>
-                     <div>
-                        <h2 id="stats-registered" class="text-5xl font-bold gradient-text">2.200+</h2>
-                        <p class="text-slate-400 mt-2">Pengguna Terdaftar</p>
+                     <div class="card-bg p-8 rounded-lg text-center relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500/20 group-hover:bg-emerald-400 transition-colors"></div>
+                        <i data-lucide="users" class="w-6 h-6 text-slate-600 mb-4 mx-auto group-hover:text-emerald-400 transition-colors"></i>
+                        <h2 id="stats-registered" class="text-4xl font-mono font-bold text-white tracking-tighter">2.200+</h2>
+                        <p class="text-xs font-mono text-slate-400 mt-2 uppercase tracking-widest">Pengguna Terdaftar</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Reporting Section Wrapper -->
-        <section id="report-section-wrapper" class="py-20 bg-slate-950/50">
-            <div id="logged-out-view" class="container mx-auto px-6 text-center">
-                 <h2 class="text-3xl md:text-4xl font-bold text-white">Buat Laporan Anda</h2>
-                 <p class="text-slate-400 mt-2 max-w-2xl mx-auto">Untuk memastikan keamanan dan validitas data pemerintah, Anda perlu mendaftarkan identitas Anda.</p>
-                 <button id="login-prompt-button" class="mt-8 btn-primary text-white font-bold py-3 px-8 rounded-full text-lg hover:shadow-lg hover:shadow-cyan-500/50 transform hover:-translate-y-1 transition-all duration-300">
-                    Masuk / Daftar untuk Melapor
-                </button>
+        <section id="report-section-wrapper" class="py-20">
+            <!-- NOT LOGGED IN VIEW -->
+            <div id="logged-out-view" class="container mx-auto px-6">
+                 <div class="max-w-3xl mx-auto card-bg p-12 rounded-lg text-center border-dashed border-slate-600">
+                    <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i data-lucide="user-x" class="w-8 h-8 text-slate-400"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2 tracking-tight">Silakan Masuk atau Daftar</h2>
+                    <p class="text-sm text-slate-400 mb-8 leading-relaxed">
+                        Anda harus memiliki akun untuk membuat laporan. Hal ini untuk memastikan data valid dan mencegah laporan palsu. Jangan khawatir, data pribadi Anda dilindungi dengan enkripsi tinggi.
+                    </p>
+                    <button id="login-prompt-button" class="btn-primary py-3 px-8 text-sm">
+                        Masuk / Daftar Sekarang
+                    </button>
+                 </div>
             </div>
             
+            <!-- LOGGED IN VIEW -->
             <div id="logged-in-view" class="hidden container mx-auto px-6">
-                 <div class="text-center mb-12">
-                    <h2 class="text-3xl md:text-4xl font-bold text-white">Buat Laporan Baru</h2>
-                    <p id="welcome-back-message" class="text-slate-400 mt-2 max-w-2xl mx-auto">Selamat datang kembali!</p>
+                <div class="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+                            <i data-lucide="terminal-square" class="text-cyan-400"></i> Formulir Laporan
+                        </h2>
+                        <p id="welcome-back-message" class="text-sm font-mono text-slate-400 mt-2">Selamat datang kembali!</p>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Form Laporan -->
-                    <div class="lg:col-span-2 card-bg p-8 md:p-12 rounded-2xl shadow-2xl">
+                    <div class="lg:col-span-2 card-bg p-6 md:p-8 rounded-lg relative overflow-hidden">
+                        <!-- Decorative top accent -->
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-transparent"></div>
+
                         <form id="reportForm" class="space-y-6">
                             <div>
-                                <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Nama Pelapor (Terisi Otomatis)</label>
-                                <input type="text" name="name" id="name" disabled class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-400 cursor-not-allowed">
-                                <div class="flex items-center mt-3">
-                                    <input id="anonymous" name="anonymous" type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-cyan-500">
-                                    <label for="anonymous" class="ml-2 block text-sm text-slate-400 select-none cursor-pointer">Rahasiakan nama saya di laporan (Anonim)</label>
+                                <label for="name" class="block text-xs font-mono font-bold text-slate-400 mb-2 uppercase tracking-widest">Identitas Pelapor</label>
+                                <input type="text" name="name" id="name" disabled class="cyber-input w-full px-4 py-3 cursor-not-allowed opacity-70">
+                                <div class="flex items-center mt-3 p-3 bg-slate-900/50 border border-slate-700/50 rounded-md">
+                                    <input id="anonymous" name="anonymous" type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900">
+                                    <label for="anonymous" class="ml-3 block text-sm font-medium text-slate-300 select-none cursor-pointer">
+                                        Rahasiakan nama saya (Anonim) <span class="text-xs text-slate-500 font-normal ml-1">(Nama tidak akan disertakan pada laporan publik)</span>
+                                    </label>
                                 </div>
                             </div>
+                            
                             <div>
-                                <label for="website" class="block text-sm font-medium text-slate-300 mb-2">Domain Website / URL</label>
-                                <input type="url" name="website" id="website" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition" placeholder="https://contohjudionline.com">
+                                <label for="website" class="block text-xs font-mono font-bold text-slate-400 mb-2 uppercase tracking-widest">Alamat Website / Tautan</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <i data-lucide="link" class="w-4 h-4 text-slate-500"></i>
+                                    </div>
+                                    <input type="url" name="website" id="website" required class="cyber-input w-full pl-11 pr-4 py-3" placeholder="https://contoh-situs-judi.com">
+                                </div>
                             </div>
+
                             <div>
-                                <label for="report_details" class="block text-sm font-medium text-slate-300 mb-2">Detail Laporan</label>
-                                <textarea id="report_details" name="report_details" rows="5" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition" placeholder="Jelaskan aktivitas yang dilaporkan..."></textarea>
+                                <label for="report_details" class="block text-xs font-mono font-bold text-slate-400 mb-2 uppercase tracking-widest">Detail Laporan</label>
+                                <textarea id="report_details" name="report_details" rows="4" required class="cyber-input w-full px-4 py-3" placeholder="Jelaskan aktivitas perjudian, promosi di media sosial, atau kronologi selengkapnya..."></textarea>
                             </div>
+
                             <div>
-                                <label for="file-upload" class="block text-sm font-medium text-slate-300 mb-2">Unggah Bukti (Gambar)</label>
-                                <div class="mt-2 flex justify-center rounded-lg border border-dashed border-slate-600 px-6 py-10">
+                                <label for="file-upload" class="block text-xs font-mono font-bold text-slate-400 mb-2 uppercase tracking-widest">Unggah Bukti (Gambar / Screenshot)</label>
+                                <div class="mt-2 flex justify-center rounded-md border border-dashed border-slate-600 bg-slate-900/50 px-6 py-8 hover:bg-slate-800/50 hover:border-cyan-500/50 transition-colors group">
                                     <div class="text-center">
-                                        <i data-lucide="upload-cloud" class="mx-auto h-12 w-12 text-slate-500"></i>
-                                        <div class="mt-4 flex text-sm leading-6 text-slate-400">
-                                            <label for="file-upload-input" class="relative cursor-pointer rounded-md font-semibold text-cyan-400 focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-500 hover:text-cyan-500">
-                                                <span>Unggah file</span>
+                                        <i data-lucide="image-plus" class="mx-auto h-10 w-10 text-slate-500 group-hover:text-cyan-400 transition-colors"></i>
+                                        <div class="mt-4 flex text-sm leading-6 justify-center">
+                                            <label for="file-upload-input" class="relative cursor-pointer rounded-md font-medium text-cyan-400 hover:text-cyan-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-500 focus-within:ring-offset-2 focus-within:ring-offset-slate-900">
+                                                <span>Pilih File Gambar</span>
                                                 <input id="file-upload-input" name="file-upload" type="file" accept="image/png, image/jpeg, image/jpg" class="sr-only">
                                             </label>
-                                            <p class="pl-1">atau tarik dan lepas</p>
+                                            <p class="pl-1 text-slate-400">atau tarik ke sini</p>
                                         </div>
-                                        <p class="text-xs leading-5 text-slate-500">PNG, JPG (Metadata akan dihapus otomatis)</p>
-                                        <p id="file-name" class="text-sm text-cyan-400 mt-2 font-mono"></p>
+                                        <p class="text-xs text-slate-500 mt-2 font-mono">Format PNG/JPG. (Data lokasi pada foto akan dihapus otomatis demi keamanan)</p>
+                                        <p id="file-name" class="text-sm text-emerald-400 mt-2 font-mono font-bold"></p>
                                     </div>
                                 </div>
                             </div>
-                            <div>
+
+                            <div class="pt-2 border-t border-slate-800">
                                 <!-- Turnstile CAPTCHA -->
                                 <div class="cf-turnstile my-4 flex justify-center" data-sitekey="0x4AAAAAAB8Es5v_tBV9BFWn" data-theme="dark" data-callback="onTurnstileSuccess"></div>
                                 
-                                <div id="report-error" class="hidden text-red-400 text-sm text-center mb-4"></div>
+                                <div id="report-error" class="hidden text-red-400 text-sm font-mono text-center mb-4 bg-red-900/20 p-2 rounded"></div>
 
-                                <button type="submit" class="w-full btn-primary text-white font-bold py-3 px-8 rounded-lg text-lg hover:shadow-lg hover:shadow-cyan-500/50 transform hover:-translate-y-1 transition-all duration-300 mt-4">
+                                <button type="submit" class="w-full btn-primary py-3.5 flex items-center justify-center gap-2">
+                                    <i data-lucide="send" class="w-4 h-4"></i>
                                     Kirim Laporan
                                 </button>
                             </div>
                         </form>
-                        <div id="success-message" class="hidden mt-6 bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg" role="alert">
-                            <strong class="font-bold block mb-2">Laporan Terkirim!</strong>
-                            <span class="block sm:inline mb-2">Nomor tiket: <span id="success-ticket-id" class="font-mono text-white font-bold"></span>. Simpan tiket ini.</span>
-                            <button id="download-pdf-btn" class="mt-2 flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-md text-sm transition">
-                                <i data-lucide="file-down" class="w-4 h-4"></i> Unduh Bukti (PDF)
-                            </button>
+
+                        <div id="success-message" class="hidden mt-6 bg-emerald-950/40 border border-emerald-500/50 text-emerald-200 px-5 py-4 rounded-md" role="alert">
+                            <div class="flex items-start gap-3">
+                                <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 mt-0.5"></i>
+                                <div>
+                                    <strong class="font-bold block text-emerald-400 mb-1">Laporan Berhasil Dikirim!</strong>
+                                    <span class="block text-sm mb-3 text-emerald-100/70">Nomor Tiket: <span id="success-ticket-id" class="font-mono font-bold text-white bg-emerald-900/50 px-2 py-0.5 rounded"></span></span>
+                                    <button id="download-pdf-btn" class="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-colors">
+                                        <i data-lucide="download" class="w-4 h-4"></i> Unduh Bukti (PDF)
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- USER DASHBOARD (HISTORY) -->
                     <div class="lg:col-span-1">
-                        <div class="card-bg p-6 rounded-2xl h-full shadow-xl overflow-hidden flex flex-col">
-                            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                                <i data-lucide="history" class="text-cyan-400"></i> Riwayat Anda
+                        <div class="card-bg p-6 rounded-lg h-full flex flex-col border-t-blue-500/40">
+                            <h3 class="text-sm font-mono font-bold text-slate-300 mb-4 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-3">
+                                <i data-lucide="activity" class="text-blue-400"></i> Riwayat Laporan Anda
                             </h3>
-                            <div class="flex-grow overflow-y-auto custom-scrollbar" style="max-height: 500px;">
-                                <div id="user-dashboard-loading" class="text-center py-4">
-                                    <div class="loader mx-auto w-6 h-6 border-4"></div>
+                            <div class="flex-grow overflow-y-auto custom-scrollbar pr-2" style="max-height: 600px;">
+                                <div id="user-dashboard-loading" class="text-center py-8">
+                                    <div class="loader mx-auto"></div>
                                 </div>
-                                <div id="user-dashboard-empty" class="hidden text-center text-slate-500 py-8">
-                                    Belum ada laporan.
+                                <div id="user-dashboard-empty" class="hidden text-center text-sm font-mono text-slate-500 py-12">
+                                    <i data-lucide="database" class="w-8 h-8 mx-auto mb-3 opacity-20"></i>
+                                    [ Belum ada laporan ]
                                 </div>
                                 <div id="user-dashboard-list" class="space-y-3">
                                     <!-- List items injected via JS -->
@@ -228,15 +342,22 @@
         </section>
 
         <!-- Lacak Laporan Section -->
-        <section id="lacak" class="py-20">
+        <section id="lacak" class="py-20 bg-slate-900/40 border-y border-slate-800/50">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-12">
-                    <h2 class="text-3xl md:text-4xl font-bold text-white">Lacak Status Laporan</h2>
+                <div class="max-w-2xl mx-auto text-center mb-10">
+                    <h2 class="text-3xl font-bold text-white tracking-tight mb-3">Lacak Status Laporan</h2>
+                    <p class="text-sm text-slate-400">Pantau sejauh mana laporan Anda telah diproses oleh tim kami.</p>
                 </div>
                 <div class="max-w-xl mx-auto">
-                    <div class="flex gap-2">
-                        <input type="text" id="ticket-input" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition" placeholder="Contoh: LP-2025...">
-                        <button id="track-btn" class="bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-300">Lacak</button>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="relative flex-grow">
+                            <i data-lucide="hash" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                            <input type="text" id="ticket-input" class="cyber-input w-full pl-10 pr-4 py-3.5 font-mono text-sm uppercase" placeholder="NOMOR TIKET (CONTOH: LP-123456-ABC)">
+                        </div>
+                        <button id="track-btn" class="btn-primary py-3.5 px-8 flex items-center justify-center gap-2">
+                            <i data-lucide="radar" class="w-4 h-4"></i>
+                            Lacak
+                        </button>
                     </div>
                 </div>
                 <div id="tracking-result-container" class="max-w-xl mx-auto mt-8"></div>
@@ -244,64 +365,37 @@
         </section>
         
         <!-- FAQ Section -->
-        <section id="faq" class="py-20 bg-slate-950/50">
+        <section id="faq" class="py-20">
             <div class="container mx-auto px-6">
                  <div class="text-center mb-12">
-                    <h2 class="text-3xl md:text-4xl font-bold text-white">Frequently Asked Questions (FAQ)</h2>
+                    <h2 class="text-3xl font-bold text-white tracking-tight">Pertanyaan Umum (FAQ)</h2>
                 </div>
-                <div class="max-w-3xl mx-auto space-y-4">
-                    <div class="card-bg rounded-lg">
-                        <button class="faq-question w-full flex justify-between items-center text-left p-6 hover:bg-slate-700/50">
-                            <span class="font-semibold text-white">Apakah data NIK saya aman?</span>
-                            <i data-lucide="plus" class="w-6 h-6 text-slate-400 icon-plus"></i>
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <div class="card-bg rounded border border-slate-700/50">
+                        <button class="faq-question w-full flex justify-between items-center text-left p-5 text-sm font-medium text-slate-200">
+                            <span>Bagaimana keamanan data NIK dan KTP saya?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-slate-500 icon-plus"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-6">
-                            <p class="text-slate-400">Ya. Data pribadi Anda seperti NIK dan Alamat dienkripsi sebelum disimpan ke sistem kami. Hanya admin berwenang dengan kunci khusus yang dapat membukanya untuk verifikasi.</p>
+                        <div class="faq-answer px-5 pb-5 border-t border-slate-800/50 mt-2 pt-4">
+                            <p class="text-sm text-slate-400 leading-relaxed">Data pribadi Anda seperti NIK, Nama, dan Alamat diubah menjadi kode rahasia (dienkripsi) sebelum disimpan. Hanya pihak berwenang yang dapat membuka kode tersebut jika dibutuhkan untuk keperluan hukum.</p>
                         </div>
                     </div>
-                    <div class="card-bg rounded-lg">
-                        <button class="faq-question w-full flex justify-between items-center text-left p-6 hover:bg-slate-700/50">
-                            <span class="font-semibold text-white">Apakah laporan saya benar-benar anonim?</span>
-                            <i data-lucide="plus" class="w-6 h-6 text-slate-400 icon-plus"></i>
+                    <div class="card-bg rounded border border-slate-700/50">
+                        <button class="faq-question w-full flex justify-between items-center text-left p-5 text-sm font-medium text-slate-200">
+                            <span>Apakah nama saya akan ketahuan oleh publik?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-slate-500 icon-plus"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-6">
-                            <p class="text-slate-400">Ya. Jika Anda mencentang opsi "melapor secara anonim", nama Anda yang terasosiasi dengan akun tidak akan disertakan dalam laporan yang diteruskan ke pihak berwenang. Kami sangat menjaga privasi pelapor.</p>
+                        <div class="faq-answer px-5 pb-5 border-t border-slate-800/50 mt-2 pt-4">
+                            <p class="text-sm text-slate-400 leading-relaxed">Tidak. Jika Anda mencentang pilihan "Rahasiakan nama saya (Anonim)" saat mengisi formulir, maka nama Anda tidak akan pernah ditampilkan pada laporan publik atau dilacak oleh pihak ketiga yang tidak berkepentingan.</p>
                         </div>
                     </div>
-                    <div class="card-bg rounded-lg">
-                        <button class="faq-question w-full flex justify-between items-center text-left p-6 hover:bg-slate-700/50">
-                            <span class="font-semibold text-white">Berapa lama proses penanganan laporan?</span>
-                            <i data-lucide="plus" class="w-6 h-6 text-slate-400 icon-plus"></i>
+                    <div class="card-bg rounded border border-slate-700/50">
+                        <button class="faq-question w-full flex justify-between items-center text-left p-5 text-sm font-medium text-slate-200">
+                            <span>Berapa lama laporan saya akan diproses?</span>
+                            <i data-lucide="plus" class="w-5 h-5 text-slate-500 icon-plus"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-6">
-                            <p class="text-slate-400">Waktu penanganan bervariasi tergantung kompleksitas laporan. Namun, Anda dapat memantau statusnya secara real-time melalui fitur "Lacak Laporan" menggunakan nomor tiket Anda.</p>
-                        </div>
-                    </div>
-                    <div class="card-bg rounded-lg">
-                        <button class="faq-question w-full flex justify-between items-center text-left p-6 hover:bg-slate-700/50">
-                            <span class="font-semibold text-white">Bukti apa saja yang sebaiknya saya lampirkan?</span>
-                            <i data-lucide="plus" class="w-6 h-6 text-slate-400 icon-plus"></i>
-                        </button>
-                        <div class="faq-answer px-6 pb-6">
-                            <p class="text-slate-400">Bukti yang kuat akan mempercepat proses verifikasi. Anda bisa melampirkan tangkapan layar (screenshot) dari situs yang dilaporkan, URL lengkap, atau bukti transaksi jika ada. Semakin lengkap, semakin baik.</p>
-                        </div>
-                    </div>
-                    <div class="card-bg rounded-lg">
-                        <button class="faq-question w-full flex justify-between items-center text-left p-6 hover:bg-slate-700/50">
-                            <span class="font-semibold text-white">Apa yang terjadi setelah saya mengirim laporan?</span>
-                            <i data-lucide="plus" class="w-6 h-6 text-slate-400 icon-plus"></i>
-                        </button>
-                        <div class="faq-answer px-6 pb-6">
-                            <p class="text-slate-400">Setelah laporan dikirim, tim kami akan melakukan verifikasi awal. Jika valid, laporan akan diteruskan ke pihak Komdigi dan Kepolisian untuk ditindaklanjuti, seperti pemblokiran situs.</p>
-                        </div>
-                    </div>
-                     <div class="card-bg rounded-lg">
-                        <button class="faq-question w-full flex justify-between items-center text-left p-6 hover:bg-slate-700/50">
-                            <span class="font-semibold text-white">Bisakah saya melaporkan akun media sosial?</span>
-                            <i data-lucide="plus" class="w-6 h-6 text-slate-400 icon-plus"></i>
-                        </button>
-                        <div class="faq-answer px-6 pb-6">
-                            <p class="text-slate-400">Tentu. Anda dapat melaporkan akun media sosial yang mempromosikan judi online. Masukkan URL/link profil akun tersebut di kolom "Domain Website" dan berikan penjelasan detail di isi laporan.</p>
+                        <div class="faq-answer px-5 pb-5 border-t border-slate-800/50 mt-2 pt-4">
+                            <p class="text-sm text-slate-400 leading-relaxed">Setelah laporan masuk dan diverifikasi, umumnya pihak Komdigi akan memproses pemblokiran situs dalam waktu 1x24 jam kerja. Anda selalu bisa mengecek statusnya di fitur "Lacak Status Laporan".</p>
                         </div>
                     </div>
                 </div>
@@ -309,120 +403,126 @@
         </section>
     </main>
 
-    <!-- Footer Baru -->
-    <footer class="bg-slate-950 border-t border-slate-800 pt-16 pb-8 mt-auto">
+    <!-- Footer -->
+    <footer class="bg-[#02040a] border-t border-slate-800 pt-16 pb-8 mt-auto">
         <div class="container mx-auto px-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                 <!-- Kolom 1: Perusahaan -->
                 <div class="col-span-1 md:col-span-2">
                     <div class="flex items-center gap-3 mb-6">
-                        <img src="https://i.imgur.com/tSjZXkR.png" alt="Meridian Digital Logo" class="h-12 w-auto object-contain">
-                        <span class="text-2xl font-bold text-white tracking-tight">Meridian Digital</span>
+                        <!-- Logo Meridian Digital -->
+                        <img src="logo.png" alt="Meridian Digital Logo" class="h-14 w-auto object-contain">
+                        <span class="text-xl font-bold text-white tracking-tight uppercase">Meridian Digital</span>
                     </div>
-                    <p class="text-slate-400 leading-relaxed mb-6 max-w-sm">
-                        Mitra resmi pemerintah dalam menjaga ruang digital Indonesia. Kami menyediakan solusi teknologi keamanan siber dan pelaporan konten ilegal yang terintegrasi, aman, dan transparan.
+                    <p class="text-sm text-slate-400 leading-relaxed mb-6 max-w-sm">
+                        Mitra resmi pemerintah dalam menjaga ruang digital Indonesia. Kami menyediakan platform pelaporan yang aman, rahasia, dan transparan.
                     </p>
                     <div class="flex gap-4">
-                        <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-cyan-600 hover:text-white transition-all">
-                            <i data-lucide="linkedin" class="w-5 h-5"></i>
+                        <a href="#" class="w-9 h-9 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all">
+                            <i data-lucide="linkedin" class="w-4 h-4"></i>
                         </a>
-                        <a href="https://x.com" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-cyan-600 hover:text-white transition-all">
-                            <i data-lucide="twitter" class="w-5 h-5"></i>
+                        <a href="#" class="w-9 h-9 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all">
+                            <i data-lucide="twitter" class="w-4 h-4"></i>
                         </a>
-                        <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-cyan-600 hover:text-white transition-all">
-                            <i data-lucide="instagram" class="w-5 h-5"></i>
+                        <a href="#" class="w-9 h-9 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all">
+                            <i data-lucide="instagram" class="w-4 h-4"></i>
                         </a>
                     </div>
                 </div>
 
                 <!-- Kolom 2: Navigasi -->
                 <div>
-                    <h4 class="text-white font-bold mb-6 text-lg">Tautan Cepat</h4>
-                    <ul class="space-y-4">
-                        <li><a href="#hero" class="text-slate-400 hover:text-cyan-400 transition-colors">Beranda</a></li>
-                        <li><a href="#lacak" class="text-slate-400 hover:text-cyan-400 transition-colors">Lacak Laporan</a></li>
-                        <li><a href="#faq" class="text-slate-400 hover:text-cyan-400 transition-colors">FAQ</a></li>
-                        <li><a href="admin.html" class="text-slate-400 hover:text-cyan-400 transition-colors">Login Admin</a></li>
+                    <h4 class="text-xs font-mono font-bold text-slate-300 mb-6 uppercase tracking-widest">Tautan Cepat</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li><a href="#hero" class="text-slate-500 hover:text-cyan-400 transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3"></i> Beranda</a></li>
+                        <li><a href="#lacak" class="text-slate-500 hover:text-cyan-400 transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3"></i> Lacak Laporan</a></li>
+                        <li><a href="#faq" class="text-slate-500 hover:text-cyan-400 transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3"></i> FAQ</a></li>
+                        <li><a href="admin.html" class="text-slate-500 hover:text-cyan-400 transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3"></i> Dashboard Admin</a></li>
                     </ul>
                 </div>
 
                 <!-- Kolom 3: Kontak -->
                 <div>
-                    <h4 class="text-white font-bold mb-6 text-lg">Hubungi Kami</h4>
-                    <ul class="space-y-4">
+                    <h4 class="text-xs font-mono font-bold text-slate-300 mb-6 uppercase tracking-widest">Hubungi Kami</h4>
+                    <ul class="space-y-4 text-sm">
                         <li class="flex items-start gap-3 text-slate-400">
-                            <i data-lucide="map-pin" class="w-5 h-5 mt-1 text-cyan-500"></i>
-                            <span>Villa Puncak Tidar Blok N no. 1<br>Doro, Karangwidoro, Kec. Dau, Kabupaten Malang<br>Jawa Timur 65151</span>
+                            <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 text-cyan-500"></i>
+                            <span class="leading-relaxed">Villa Puncak Tidar Blok N1<br>Kab. Malang, Jawa Timur 65151</span>
                         </li>
-                        <li class="flex items-center gap-3 text-slate-400">
-                            <i data-lucide="phone" class="w-5 h-5 text-cyan-500"></i>
+                        <li class="flex items-center gap-3 text-slate-400 font-mono">
+                            <i data-lucide="phone" class="w-4 h-4 text-cyan-500"></i>
                             <span>(0341) 550171</span>
                         </li>
                         <li class="flex items-center gap-3 text-slate-400">
-                            <i data-lucide="mail" class="w-5 h-5 text-cyan-500"></i>
-                            <span>staffmeridiandigital@gmail.com</span>
+                            <i data-lucide="mail" class="w-4 h-4 text-cyan-500"></i>
+                            <span>contact@laporaman.com</span>
                         </li>
                     </ul>
                 </div>
             </div>
 
             <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-slate-500 text-sm text-center md:text-left">
-                    &copy; 2025 PT. Meridian Digital. All rights reserved.
+                <p class="text-slate-500 text-xs font-mono text-center md:text-left">
+                    &copy; 2025 PT. MERIDIAN DIGITAL. ALL RIGHTS RESERVED.
                 </p>
-                <div class="flex gap-6 text-sm text-slate-500">
-                    <a href="#" id="privacy-link" class="hover:text-cyan-400 transition-colors">Privacy Policy</a>
-                    <a href="#" id="terms-link" class="hover:text-cyan-400 transition-colors">Terms of Service</a>
+                <div class="flex gap-6 text-xs font-mono text-slate-500 uppercase">
+                    <a href="#" id="privacy-link" class="hover:text-cyan-400 transition-colors">Kebijakan Privasi</a>
+                    <a href="#" id="terms-link" class="hover:text-cyan-400 transition-colors">Syarat & Ketentuan</a>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Auth Modal (EXISTING) -->
-    <div id="auth-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div id="auth-modal-content" class="card-bg w-full max-w-2xl p-8 rounded-2xl shadow-2xl relative transform scale-95 opacity-0 transition-all duration-300 my-10">
-            <button id="close-auth-modal" class="absolute top-4 right-4 text-slate-400 hover:text-white">
-                <i data-lucide="x" class="w-6 h-6"></i>
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-y-auto">
+        <div id="auth-modal-content" class="card-bg w-full max-w-xl p-8 rounded-lg shadow-2xl relative transform scale-95 opacity-0 transition-all duration-300 my-10 border-t-cyan-500">
+            <button id="close-auth-modal" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
             </button>
-            <h2 id="auth-title" class="text-2xl font-bold text-white text-center">Selamat Datang</h2>
-            <p id="auth-subtitle" class="text-slate-400 text-center mt-2">Masuk untuk melanjutkan.</p>
+            <div class="text-center mb-8">
+                <i data-lucide="fingerprint" class="w-10 h-10 text-cyan-400 mx-auto mb-4"></i>
+                <h2 id="auth-title" class="text-2xl font-bold text-white tracking-tight">Masuk / Daftar</h2>
+                <p id="auth-subtitle" class="text-xs font-mono text-slate-400 mt-2 uppercase tracking-widest">Akses Akun Anda</p>
+            </div>
             
-            <form id="auth-form" class="mt-8 space-y-4">
+            <form id="auth-form" class="space-y-5">
                 
                 <!-- Field Khusus Registrasi -->
-                <div id="register-fields" class="hidden space-y-4 border-b border-slate-700 pb-6 mb-6">
-                    <h3 class="text-lg font-semibold text-cyan-400">Data Pribadi</h3>
+                <div id="register-fields" class="hidden space-y-5 border-b border-slate-800 pb-6 mb-6">
+                    <h3 class="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="database" class="w-3 h-3"></i> Data Pribadi
+                    </h3>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">Nama Lengkap (Sesuai KTP)</label>
-                            <input type="text" id="reg-fullname" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-cyan-500">
+                            <label class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Nama KTP</label>
+                            <input type="text" id="reg-fullname" class="cyber-input w-full px-4 py-2.5 text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">NIK</label>
-                            <input type="number" id="reg-nik" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-cyan-500">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">Username</label>
-                            <input type="text" id="reg-username" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-cyan-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">Nomor Telepon Aktif</label>
-                            <input type="tel" id="reg-phone" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-cyan-500">
+                            <label class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">No. NIK</label>
+                            <input type="number" id="reg-nik" class="cyber-input w-full px-4 py-2.5 text-sm">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">Tanggal Lahir</label>
-                            <input type="date" id="reg-dob" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-cyan-500 scheme-dark">
+                            <label class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Username</label>
+                            <input type="text" id="reg-username" class="cyber-input w-full px-4 py-2.5 text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-1">Jenis Kelamin</label>
-                            <select id="reg-gender" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-cyan-500">
+                            <label class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">No. Telp</label>
+                            <input type="tel" id="reg-phone" class="cyber-input w-full px-4 py-2.5 text-sm">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Tgl Lahir</label>
+                            <input type="date" id="reg-dob" class="cyber-input w-full px-4 py-2.5 text-sm" style="color-scheme: dark;">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Gender</label>
+                            <select id="reg-gender" class="cyber-input w-full px-4 py-2.5 text-sm">
                                 <option value="">Pilih...</option>
                                 <option value="Laki-laki">Laki-laki</option>
                                 <option value="Perempuan">Perempuan</option>
@@ -431,192 +531,133 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Alamat Tempat Tinggal</label>
-                        <textarea id="reg-address" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-cyan-500"></textarea>
+                        <label class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Alamat Domisili</label>
+                        <textarea id="reg-address" rows="2" class="cyber-input w-full px-4 py-2.5 text-sm"></textarea>
                     </div>
                 </div>
 
                 <!-- Field Login & Common -->
                 <div>
-                    <label for="email" class="block text-sm font-medium text-slate-300 mb-2">Email</label>
-                    <input type="email" name="email" id="email" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
+                    <label for="email" class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Email</label>
+                    <input type="email" name="email" id="email" required class="cyber-input w-full px-4 py-3 text-sm">
                 </div>
                 <div>
-                    <label for="password" class="block text-sm font-medium text-slate-300 mb-2">Password</label>
-                    <input type="password" name="password" id="password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
+                    <label for="password" class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Password</label>
+                    <input type="password" name="password" id="password" required class="cyber-input w-full px-4 py-3 text-sm">
                 </div>
                 
                 <div id="confirm-password-field" class="hidden">
-                    <label for="confirm-password" class="block text-sm font-medium text-slate-300 mb-2">Konfirmasi Password</label>
-                    <input type="password" id="confirm-password" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
+                    <label for="confirm-password" class="block text-xs font-mono font-bold text-slate-400 mb-1.5 uppercase">Konfirmasi Password</label>
+                    <input type="password" id="confirm-password" class="cyber-input w-full px-4 py-3 text-sm">
                 </div>
 
-                <div id="auth-error" class="hidden text-red-400 text-sm text-center"></div>
+                <div id="auth-error" class="hidden text-red-400 text-xs font-mono bg-red-900/20 p-3 rounded text-center border border-red-900"></div>
 
-                <div>
-                    <button type="submit" id="auth-action-button" class="w-full btn-primary text-white font-bold py-3 px-8 rounded-lg text-lg hover:shadow-lg hover:shadow-cyan-500/50 transform hover:-translate-y-1 transition-all duration-300">
-                        Masuk
+                <div class="pt-4">
+                    <button type="submit" id="auth-action-button" class="w-full btn-primary py-3 flex justify-center items-center gap-2">
+                        <i data-lucide="log-in" class="w-4 h-4"></i> Masuk
                     </button>
                 </div>
-                 <p id="auth-toggle-text" class="text-center text-sm text-slate-400">
-                    Belum punya akun? <a href="#" id="auth-toggle-link" class="font-medium text-cyan-400 hover:underline">Daftar sekarang</a>
+                 <p id="auth-toggle-text" class="text-center text-xs font-mono text-slate-500 mt-4">
+                    Belum memiliki akun? <a href="#" id="auth-toggle-link" class="text-cyan-400 hover:underline">Daftar sekarang</a>
                 </p>
             </form>
         </div>
     </div>
 
     <!-- Privacy Policy Modal -->
-    <div id="privacy-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-        <div class="card-bg w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl relative flex flex-col transform scale-95 opacity-0 transition-all duration-300">
-            <!-- Modal Header -->
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900/50 rounded-t-2xl">
-                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i data-lucide="shield-check" class="text-cyan-400"></i>
+    <div id="privacy-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+        <div class="card-bg w-full max-w-3xl max-h-[85vh] rounded-lg shadow-2xl relative flex flex-col transform scale-95 opacity-0 transition-all duration-300">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 rounded-t-lg">
+                <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    <i data-lucide="shield-check" class="text-cyan-400 w-5 h-5"></i>
                     Kebijakan Privasi
                 </h2>
-                <button class="close-privacy-modal text-slate-400 hover:text-white transition">
-                    <i data-lucide="x" class="w-6 h-6"></i>
+                <button class="close-privacy-modal text-slate-500 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <!-- Modal Content (Scrollable) -->
-            <div class="p-8 overflow-y-auto custom-scrollbar text-slate-300 space-y-6 leading-relaxed text-sm md:text-base">
+            <div class="p-8 overflow-y-auto custom-scrollbar text-slate-300 space-y-6 text-sm leading-relaxed">
                 <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">1. Pendahuluan</h3>
-                    <p>PT. Meridian Digital ("Kami") berkomitmen untuk melindungi privasi dan keamanan data pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, memproses, dan melindungi informasi yang Anda berikan saat menggunakan platform LaporAman.</p>
+                    <h3 class="text-white font-semibold">1. Pendahuluan</h3>
+                    <p class="text-slate-400">PT. Meridian Digital ("Kami") berkomitmen untuk melindungi privasi dan keamanan data pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, memproses, dan melindungi informasi yang Anda berikan saat menggunakan platform LaporAman.</p>
                 </div>
-
                 <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">2. Informasi yang Kami Kumpulkan</h3>
-                    <p>Dalam rangka memverifikasi validitas pelapor sesuai standar pemerintah, kami mengumpulkan data berikut:</p>
+                    <h3 class="text-white font-semibold">2. Informasi yang Kami Kumpulkan</h3>
+                    <p class="text-slate-400">Dalam rangka memverifikasi validitas pelapor sesuai standar pemerintah, kami mengumpulkan data berikut:</p>
                     <ul class="list-disc pl-5 space-y-1 text-slate-400">
-                        <li><strong>Identitas Pribadi:</strong> Nama Lengkap (Sesuai KTP), Nomor Induk Kependudukan (NIK), Alamat, dan Nomor Telepon.</li>
+                        <li><strong>Identitas Pribadi:</strong> Nama Lengkap (Sesuai KTP), NIK, Alamat, dan Telepon.</li>
                         <li><strong>Data Akun:</strong> Email dan Username.</li>
-                        <li><strong>Data Laporan:</strong> URL situs judi online, bukti gambar (screenshot), dan deskripsi kejadian.</li>
+                        <li><strong>Data Laporan:</strong> URL situs judi online, bukti gambar, dan deskripsi.</li>
                     </ul>
                 </div>
-
                 <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">3. Penggunaan Data dan Enkripsi</h3>
-                    <p>Keamanan data Anda adalah prioritas utama kami:</p>
+                    <h3 class="text-white font-semibold">3. Penggunaan Data dan Enkripsi</h3>
                     <ul class="list-disc pl-5 space-y-1 text-slate-400">
-                        <li><strong>Enkripsi Tingkat Lanjut:</strong> Seluruh data sensitif (NIK, Nama Asli, Alamat, No. HP) dienkripsi menggunakan standar AES-256 sebelum disimpan ke dalam database kami. Ini berarti data Anda tidak dapat dibaca tanpa kunci dekripsi khusus yang dipegang oleh administrator berwenang.</li>
-                        <li><strong>Tujuan Penggunaan:</strong> Data digunakan semata-mata untuk verifikasi keaslian laporan dan koordinasi dengan pihak berwenang (Kementerian Komunikasi dan Digital & POLRI) jika diperlukan proses hukum lebih lanjut.</li>
+                        <li><strong>Keamanan:</strong> Seluruh data sensitif dienkripsi sebelum disimpan ke dalam database. Ini berarti orang lain tidak bisa membaca data Anda dengan mudah.</li>
+                        <li><strong>Tujuan Penggunaan:</strong> Data digunakan hanya untuk mengecek keaslian laporan dan membantu pihak berwajib melakukan penyelidikan jika diperlukan.</li>
                     </ul>
                 </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">4. Anonimitas Pelapor</h3>
-                    <p>Kami menyediakan fitur pelaporan anonim. Jika Anda memilih opsi ini, identitas Anda tidak akan ditampilkan pada laporan publik atau diteruskan kepada pihak ketiga kecuali diwajibkan oleh perintah pengadilan yang sah.</p>
-                </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">5. Pembagian Data kepada Pihak Ketiga</h3>
-                    <p>Kami tidak menjual, menyewakan, atau menukar data pribadi Anda dengan pihak manapun. Data Anda hanya dibagikan kepada instansi penegak hukum resmi di Indonesia untuk keperluan penyelidikan tindak pidana perjudian online.</p>
-                </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">6. Hak Pengguna</h3>
-                    <p>Anda memiliki hak untuk meminta penghapusan akun dan data pribadi Anda dari sistem kami dengan menghubungi layanan pelanggan kami di <em>staffmeridiandigital@gmail.com</em>.</p>
-                </div>
-
-                <div class="pt-6 border-t border-slate-700 text-xs text-slate-500 text-center">
-                    Terakhir diperbarui: 10 Desember 2025
-                </div>
+                <div class="pt-6 border-t border-slate-800 text-xs font-mono text-slate-500">Update Terakhir: Desember 2025</div>
             </div>
-            <!-- Modal Footer -->
-            <div class="p-6 border-t border-slate-700 bg-slate-900/50 rounded-b-2xl flex justify-end">
-                <button class="close-privacy-modal bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-6 rounded-lg transition">Tutup</button>
+            <div class="p-4 border-t border-slate-800 bg-slate-900/80 rounded-b-lg flex justify-end">
+                <button class="close-privacy-modal bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-6 rounded-md transition text-sm">Tutup</button>
             </div>
         </div>
     </div>
 
     <!-- Terms of Service Modal -->
-    <div id="terms-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-        <div class="card-bg w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl relative flex flex-col transform scale-95 opacity-0 transition-all duration-300">
-            <!-- Modal Header -->
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900/50 rounded-t-2xl">
-                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i data-lucide="file-text" class="text-amber-500"></i>
-                    Syarat & Ketentuan
+    <div id="terms-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+        <div class="card-bg w-full max-w-3xl max-h-[85vh] rounded-lg shadow-2xl relative flex flex-col transform scale-95 opacity-0 transition-all duration-300">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 rounded-t-lg">
+                <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    <i data-lucide="file-text" class="text-amber-500 w-5 h-5"></i> Syarat & Ketentuan
                 </h2>
-                <button class="close-terms-modal text-slate-400 hover:text-white transition">
-                    <i data-lucide="x" class="w-6 h-6"></i>
-                </button>
+                <button class="close-terms-modal text-slate-500 hover:text-white transition"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <!-- Modal Content (Scrollable) -->
-            <div class="p-8 overflow-y-auto custom-scrollbar text-slate-300 space-y-6 leading-relaxed text-sm md:text-base">
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">1. Penerimaan Syarat</h3>
-                    <p>Dengan mengakses atau menggunakan platform LaporAman yang dikelola oleh PT. Meridian Digital, Anda setuju untuk terikat oleh Syarat dan Ketentuan ini. Jika Anda tidak setuju, mohon untuk tidak menggunakan layanan kami.</p>
-                </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">2. Akurasi Informasi</h3>
-                    <p>Anda setuju untuk memberikan informasi yang benar, akurat, terkini, dan lengkap saat melakukan pendaftaran akun dan pengajuan laporan. Pemalsuan identitas (NIK palsu) atau pembuatan laporan palsu adalah pelanggaran serius yang dapat berakibat pada pemblokiran akun permanen dan potensi tuntutan hukum sesuai UU ITE yang berlaku di Indonesia.</p>
-                </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">3. Tata Cara Pelaporan</h3>
-                    <ul class="list-disc pl-5 space-y-1 text-slate-400">
-                        <li>Laporan harus didukung dengan bukti yang valid (URL yang dapat diakses, tangkapan layar yang jelas).</li>
-                        <li>Dilarang menggunakan bahasa kasar, berbau SARA, atau ancaman dalam deskripsi laporan.</li>
-                        <li>Dilarang menyalahgunakan sistem ini untuk menjatuhkan pesaing bisnis atau situs yang tidak melanggar hukum (laporan palsu).</li>
-                    </ul>
-                </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">4. Peran Kami</h3>
-                    <p>LaporAman bertindak sebagai perantara dan pengumpul data. Kami bukan lembaga penegak hukum. Wewenang pemblokiran situs dan penangkapan pelaku sepenuhnya berada di tangan Kementerian Komunikasi dan Digital serta Kepolisian Republik Indonesia.</p>
-                </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">5. Hak Kekayaan Intelektual</h3>
-                    <p>Seluruh konten, desain, logo, dan kode sumber pada website ini adalah milik PT. Meridian Digital. Pengguna dilarang menyalin, memodifikasi, atau mendistribusikan ulang tanpa izin tertulis.</p>
-                </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-lg font-semibold text-white">6. Batasan Tanggung Jawab</h3>
-                    <p>Kami berupaya menjaga layanan tetap berjalan 24/7. Namun, kami tidak bertanggung jawab atas kerugian yang timbul akibat gangguan teknis, kegagalan server, atau akses tidak sah yang berada di luar kendali wajar kami (*force majeure*).</p>
-                </div>
-
-                <div class="pt-6 border-t border-slate-700 text-xs text-slate-500 text-center">
-                    Terakhir diperbarui: 10 Desember 2025
-                </div>
+            <div class="p-8 overflow-y-auto custom-scrollbar text-slate-300 space-y-6 text-sm leading-relaxed">
+                <p>Dengan mengakses platform LaporAman yang dikelola PT. Meridian Digital, Anda setuju untuk terikat oleh Syarat dan Ketentuan ini dan menjamin bahwa laporan yang Anda buat adalah fakta yang sebenarnya dan bukan kebohongan/fitnah.</p>
+                <div class="pt-6 border-t border-slate-800 text-xs font-mono text-slate-500">Update Terakhir: Desember 2025</div>
             </div>
-            <!-- Modal Footer -->
-            <div class="p-6 border-t border-slate-700 bg-slate-900/50 rounded-b-2xl flex justify-end">
-                <button class="close-terms-modal bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-6 rounded-lg transition">Saya Setuju</button>
+            <div class="p-4 border-t border-slate-800 bg-slate-900/80 rounded-b-lg flex justify-end">
+                <button class="close-terms-modal bg-cyan-700 hover:bg-cyan-600 text-white font-medium py-2 px-6 rounded-md transition text-sm">Saya Mengerti</button>
             </div>
         </div>
     </div>
 
-    <!-- Floating Chat Button (EXISTING) -->
-    <button id="chat-toggle-button" class="fixed bottom-6 right-6 btn-primary p-4 rounded-full shadow-lg hover:shadow-cyan-500/50 transform hover:scale-110 transition-all duration-300 z-40">
-        <i data-lucide="message-square-text" class="w-8 h-8 text-white"></i>
+    <!-- Floating Chat Button -->
+    <button id="chat-toggle-button" class="fixed bottom-6 right-6 btn-primary p-3.5 rounded-full shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:scale-105 transition-all duration-300 z-40 flex items-center justify-center">
+        <i data-lucide="bot" class="w-6 h-6 text-white"></i>
     </button>
     
-    <!-- Chat Window (EXISTING) -->
-    <div id="chat-window" class="hidden fixed bottom-24 right-6 w-full max-w-sm h-[60vh] card-bg rounded-2xl shadow-2xl flex flex-col z-50 transform translate-y-4 opacity-0 transition-all duration-300">
-         <div class="flex justify-between items-center p-4 border-b border-slate-700">
-            <h3 class="font-bold text-white flex items-center gap-2">CS LaporAman</h3>
-            <button id="close-chat-button" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+    <!-- Chat Window -->
+    <div id="chat-window" class="hidden fixed bottom-24 right-6 w-full max-w-sm h-[60vh] card-bg rounded-lg shadow-2xl flex flex-col z-50 transform translate-y-4 opacity-0 transition-all duration-300 border border-slate-700">
+         <div class="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-900/80 rounded-t-lg">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                <h3 class="font-bold text-white text-sm tracking-tight">CS LaporAman <span class="text-slate-500 font-normal">v2.5</span></h3>
+            </div>
+            <button id="close-chat-button" class="text-slate-500 hover:text-white"><i data-lucide="minus" class="w-5 h-5"></i></button>
         </div>
-        <div id="chat-messages" class="flex-1 p-4 space-y-4 overflow-y-auto">
+        <div id="chat-messages" class="flex-1 p-4 space-y-4 overflow-y-auto bg-[#050b14]/50">
              <div class="flex items-start gap-2.5">
-                <div class="flex flex-col w-full max-w-[320px] leading-1.5 p-4 border-slate-600 bg-slate-700 rounded-e-xl rounded-es-xl">
-                    <p class="text-sm font-normal text-slate-200">Halo! Saya CS Aman. Ada yang bisa saya bantu?</p>
+                <div class="flex flex-col w-full max-w-[90%] leading-relaxed p-3.5 border border-slate-700 bg-slate-800 rounded-lg rounded-tl-none">
+                    <p class="text-sm text-slate-200">Halo! Saya asisten virtual LaporAman. Ada yang bisa saya bantu hari ini terkait cara melapor atau mengecek status tiket?</p>
                 </div>
             </div>
         </div>
-        <div id="typing-indicator" class="hidden p-4 text-xs text-slate-400">Bot sedang mengetik...</div>
-        <div class="p-4 border-t border-slate-700">
-            <form id="chat-form" class="flex gap-2">
-                <input type="text" id="chat-input" class="flex-grow bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white" placeholder="Ketik...">
-                <button type="submit" class="btn-primary p-2 rounded-lg"><i data-lucide="send-horizontal" class="w-4 h-4 text-white"></i></button>
+        <div id="typing-indicator" class="hidden px-4 pb-2 text-xs font-mono text-cyan-500 italic">Sedang mengetik...</div>
+        <div class="p-3 border-t border-slate-800 bg-slate-900/80 rounded-b-lg">
+            <form id="chat-form" class="flex gap-2 relative">
+                <input type="text" id="chat-input" class="cyber-input w-full px-4 py-2.5 text-sm pr-10" placeholder="Ketik pesan Anda...">
+                <button type="submit" class="absolute right-1 top-1 bottom-1 px-2 text-cyan-400 hover:text-white transition-colors">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
             </form>
         </div>
     </div>
 
+    <!-- FIREBASE INITIALIZATION & SCRIPT INCLUDES - UNTOUCHED -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
       import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -624,10 +665,9 @@
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
       const firebaseConfig = {
-        apiKey: "AIzaSyDuP65g_gbrsyRgTZ2Q5aUHVD8dHQpQJd4",
-        authDomain: "proyek-web-lapor-judol.firebaseapp.com",
+        apiKey: "API_KEY_FIREBASE_ANDA",
+        authDomain: "DOMAIN_FIREBASE_ANDA.firebaseapp.com",
         projectId: "proyek-web-lapor-judol",
-        // UPDATED: Menggunakan bucket yang benar (.firebasestorage.app)
         storageBucket: "proyek-web-lapor-judol.firebasestorage.app",
         messagingSenderId: "403825393417",
         appId: "1:403825393417:web:ad84314bf8248f88b59dd8",

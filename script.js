@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } = authMethods;
     const { collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, arrayUnion, limit, orderBy } = dbMethods;
     const { ref, uploadBytes, getDownloadURL } = storageMethods;
-
-    const ENCRYPTION_KEY = "YOUR_SECRET_PASSPHRASE"; //change it to your own secret key for encryption
+    
+    const ENCRYPTION_KEY = "KUNCI_RAHASIA_ANDA"; // TODO: Ganti sebelum deploy
 
     // --- ELEMENTS ---
     const loadingOverlay = document.getElementById('loading-overlay');
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(nameInput) nameInput.value = user.email;
             }
 
-            if (user.email === 'example@mail.com') {
+            if (user.email === 'EMAIL_ADMIN_ANDA@gmail.com') {
                 if(adminLink) adminLink.classList.remove('hidden');
                 if(adminLinkMobile) adminLinkMobile.classList.remove('hidden');
             }
@@ -721,8 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SMART AI RESPONSE FUNCTION ---
     async function getGeminiResponse(userQuery) {
-        
-        const apiKey = "YOUR_GEMINI_API_KEY"; // Replace with your own key for local testing
+        const apiKey = "ISI_API_KEY_GEMINI_ANDA_DISINI";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         
         // 1. Build Context

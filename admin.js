@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
     onAuthStateChanged(auth, (user) => {
-        if (user && user.email === 'example@mail.com') {
+        if (user && user.email === 'staffmeridiandigital@gmail.com') {
             authGate.classList.add('hidden');
             adminContent.classList.remove('hidden');
             loadReports();

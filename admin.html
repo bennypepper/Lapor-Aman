@@ -3,112 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - LaporAman</title>
+    <title>Dashboard Admin - LaporAman</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Crypto JS untuk Dekripsi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
     <link rel="stylesheet" href="style.css">
-</head>
-<body class="antialiased">
 
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center">
-        <div class="loader"></div>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="antialiased flex flex-col min-h-screen">
+
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center">
+        <div class="loader mb-4"></div>
+        <span class="text-xs font-mono text-cyan-400 uppercase tracking-widest">Memuat Halaman...</span>
     </div>
 
-    <header class="card-bg shadow-lg">
+    <header class="bg-slate-900 border-b border-slate-800 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-white">
-                Admin<span class="gradient-text">Panel</span>
-            </h1>
-            <div class="flex items-center gap-4">
-                <a href="index.html" class="text-sm hover:text-cyan-400 transition-colors">Lihat Website</a>
-                <button id="logout-btn" class="bg-red-600 hover:bg-red-500 text-white font-medium py-2 px-4 rounded-lg">Keluar</button>
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-amber-900/30 border border-amber-500/50 flex items-center justify-center">
+                    <i data-lucide="terminal" class="w-4 h-4 text-amber-500"></i>
+                </div>
+                <h1 class="text-xl font-bold text-white tracking-tight">
+                    Admin<span class="text-amber-500">Panel</span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="index.html" class="text-xs font-mono text-slate-400 hover:text-cyan-400 transition-colors uppercase flex items-center gap-2">
+                    <i data-lucide="arrow-left" class="w-3 h-3"></i> Lihat Website
+                </a>
+                <div class="w-px h-4 bg-slate-700"></div>
+                <button id="logout-btn" class="bg-red-900/40 hover:bg-red-800 text-red-400 hover:text-white border border-red-800 font-mono text-xs uppercase tracking-widest py-2 px-4 rounded transition-colors flex items-center gap-2">
+                    <i data-lucide="power" class="w-3 h-3"></i> Keluar
+                </button>
             </div>
         </div>
     </header>
 
-    <main class="container mx-auto px-6 py-8">
+    <main class="container mx-auto px-6 py-8 flex-grow flex flex-col">
         
         <!-- Login Gate -->
-        <div id="auth-gate" class="text-center py-20">
-            <h2 class="text-2xl font-bold text-white">Akses Ditolak</h2>
-            <p class="text-slate-400 mt-2">Anda harus login sebagai admin.</p>
-            <a href="index.html" class="mt-6 inline-block btn-primary text-white py-2 px-6 rounded-full">Login</a>
+        <div id="auth-gate" class="text-center py-32 flex-grow flex flex-col justify-center items-center">
+            <i data-lucide="shield-alert" class="w-16 h-16 text-red-500 mb-6 opacity-80"></i>
+            <h2 class="text-2xl font-bold text-white tracking-tight">Akses Ditolak</h2>
+            <p class="text-slate-400 mt-2 text-sm font-mono">Anda harus login sebagai admin untuk mengakses halaman ini.</p>
+            <a href="index.html" class="mt-8 btn-primary font-bold py-3 px-8 text-sm flex items-center gap-2">
+                <i data-lucide="log-in" class="w-4 h-4"></i> Login Admin
+            </a>
         </div>
 
         <!-- Admin Content -->
         <div id="admin-content" class="hidden">
             
             <!-- Tabs -->
-            <div class="flex space-x-4 mb-6 border-b border-slate-700 pb-2">
-                <button id="tab-reports" class="px-4 py-2 text-cyan-400 border-b-2 border-cyan-400 font-semibold">Laporan Masuk</button>
-                <button id="tab-users" class="px-4 py-2 text-slate-400 hover:text-white transition">Data Pengguna</button>
+            <div class="flex space-x-2 mb-8 bg-slate-900/50 p-1.5 rounded-md border border-slate-800 w-max">
+                <button id="tab-reports" class="px-5 py-2 text-sm font-medium rounded text-white bg-slate-800 border border-slate-700 transition-all flex items-center gap-2">
+                    <i data-lucide="inbox" class="w-4 h-4"></i> Laporan Masuk
+                </button>
+                <button id="tab-users" class="px-5 py-2 text-sm font-medium rounded text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all flex items-center gap-2">
+                    <i data-lucide="users-2" class="w-4 h-4"></i> Data Pengguna
+                </button>
             </div>
 
             <!-- REPORTS VIEW -->
-            <div id="view-reports">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white">Daftar Laporan</h2>
-                    <button id="download-csv" class="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm">
-                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export CSV
+            <div id="view-reports" class="card-bg p-6 rounded-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-800 pb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="list-filter" class="w-5 h-5 text-cyan-400"></i> Daftar Laporan Masuk
+                    </h2>
+                    <button id="download-csv" class="flex items-center gap-2 bg-emerald-900/40 hover:bg-emerald-800 border border-emerald-800 text-emerald-400 hover:text-white px-4 py-2 rounded text-xs font-mono uppercase tracking-widest transition-colors">
+                        <i data-lucide="download-cloud" class="w-4 h-4"></i> Unduh CSV
                     </button>
                 </div>
-                <div class="card-bg rounded-lg overflow-hidden overflow-x-auto">
-                    <table class="w-full text-sm text-left text-slate-300">
-                        <thead class="text-xs text-slate-400 uppercase bg-slate-700/50">
+                
+                <div class="overflow-x-auto rounded border border-slate-800">
+                    <table class="w-full text-sm text-left text-slate-300 border-collapse">
+                        <thead class="text-xs text-slate-400 uppercase bg-slate-900 border-b border-slate-700 font-mono tracking-wider">
                             <tr>
-                                <th class="px-6 py-3">Tiket</th>
-                                <th class="px-6 py-3">Waktu</th>
-                                <th class="px-6 py-3">URL</th>
-                                <th class="px-6 py-3">Pelapor</th>
-                                <th class="px-6 py-3">Bukti</th>
-                                <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3">Aksi</th>
+                                <th class="px-5 py-3">ID Tiket</th>
+                                <th class="px-5 py-3">Waktu Lapor</th>
+                                <th class="px-5 py-3">URL Website</th>
+                                <th class="px-5 py-3">Pelapor</th>
+                                <th class="px-5 py-3 text-center">Lampiran</th>
+                                <th class="px-5 py-3">Status</th>
+                                <th class="px-5 py-3 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="reports-table-body"></tbody>
+                        <tbody id="reports-table-body" class="divide-y divide-slate-800 bg-[#0a0f1c]/50">
+                            <!-- Injected by admin.js -->
+                        </tbody>
                     </table>
                 </div>
             </div>
 
             <!-- USERS VIEW -->
-            <div id="view-users" class="hidden">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white">Data Pengguna Terdaftar</h2>
-                    <!-- Tombol Dekripsi -->
-                    <div class="flex gap-2">
-                        <input type="password" id="decryption-key-input" placeholder="Masukkan Kunci Enkripsi" class="bg-slate-900 border border-slate-600 text-white px-3 py-2 rounded-lg text-sm">
-                        <button id="decrypt-btn" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-                            <i data-lucide="lock-open" class="w-4 h-4"></i> Buka Data
+            <div id="view-users" class="hidden card-bg p-6 rounded-lg">
+                <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4 border-b border-slate-800 pb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="database-zap" class="w-5 h-5 text-amber-500"></i> Data Pengguna Terdaftar
+                    </h2>
+                    
+                    <div class="flex gap-2 w-full xl:w-auto">
+                        <input type="password" id="decryption-key-input" placeholder="Masukkan Kunci Enkripsi" class="cyber-input px-4 py-2 text-xs font-mono w-full xl:w-64">
+                        <button id="decrypt-btn" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded text-xs font-mono uppercase tracking-widest flex items-center gap-2 transition-colors flex-shrink-0">
+                            <i data-lucide="unlock" class="w-4 h-4"></i> Buka Data
                         </button>
                     </div>
                 </div>
 
-                <div class="card-bg rounded-lg overflow-hidden overflow-x-auto">
-                    <table class="w-full text-sm text-left text-slate-300">
-                        <thead class="text-xs text-slate-400 uppercase bg-slate-700/50">
+                <div class="overflow-x-auto rounded border border-slate-800">
+                    <table class="w-full text-sm text-left text-slate-300 border-collapse">
+                        <thead class="text-xs text-slate-400 uppercase bg-slate-900 border-b border-slate-700 font-mono tracking-wider">
                             <tr>
-                                <th class="px-6 py-3">Nama Lengkap (KTP)</th>
-                                <th class="px-6 py-3">NIK</th>
-                                <th class="px-6 py-3">Username</th>
-                                <th class="px-6 py-3">Email</th>
-                                <th class="px-6 py-3">No. HP</th>
-                                <th class="px-6 py-3">Alamat</th>
-                                <th class="px-6 py-3">Aksi</th>
+                                <th class="px-5 py-3">Nama Lengkap (KTP)</th>
+                                <th class="px-5 py-3">NIK</th>
+                                <th class="px-5 py-3">Username</th>
+                                <th class="px-5 py-3">Email</th>
+                                <th class="px-5 py-3">No. HP</th>
+                                <th class="px-5 py-3">Alamat</th>
+                                <th class="px-5 py-3 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="users-table-body">
-                            <tr><td colspan="7" class="text-center py-4">Masukkan kunci enkripsi untuk memuat data.</td></tr>
+                        <tbody id="users-table-body" class="divide-y divide-slate-800 bg-[#0a0f1c]/50">
+                            <tr><td colspan="7" class="text-center py-8 text-slate-500 font-mono text-xs">Akses terkunci. Masukkan kunci rahasia untuk melihat data.</td></tr>
                         </tbody>
                     </table>
                 </div>
                 
                 <!-- History Container -->
-                <div id="user-history-container" class="mt-8 hidden">
-                    <h3 class="text-lg font-bold text-white mb-4">Riwayat Laporan: <span id="history-username" class="text-cyan-400"></span></h3>
-                    <div class="card-bg rounded-lg p-4" id="history-content"></div>
+                <div id="user-history-container" class="mt-8 hidden bg-slate-900 border border-slate-700 rounded p-5 relative">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                    <h3 class="text-sm font-mono font-bold text-white mb-4 uppercase tracking-widest">
+                        Riwayat Laporan: <span id="history-username" class="text-cyan-400"></span>
+                    </h3>
+                    <div id="history-content" class="text-sm"></div>
                 </div>
             </div>
 
@@ -116,21 +160,24 @@
     </main>
 
     <!-- LIGHTBOX MODAL -->
-    <div id="image-modal" class="hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4">
-        <button id="close-image-modal" class="absolute top-4 right-4 text-white hover:text-gray-300">
-            <i data-lucide="x" class="w-8 h-8"></i>
+    <div id="image-modal" class="hidden fixed inset-0 z-[200] bg-slate-950/95 backdrop-blur-sm flex items-center justify-center p-4">
+        <button id="close-image-modal" class="absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800 p-2 rounded-full border border-slate-600 transition-colors">
+            <i data-lucide="x" class="w-6 h-6"></i>
         </button>
-        <img id="modal-img-content" src="" alt="Bukti Laporan" class="rounded-lg shadow-2xl object-contain">
+        <div class="relative max-w-5xl w-full flex justify-center">
+            <img id="modal-img-content" src="" alt="Bukti Laporan" class="rounded border border-slate-700 shadow-2xl max-h-[85vh] object-contain">
+        </div>
     </div>
 
+    <!-- FIREBASE INIT -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
       import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
       import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
       
-      const firebaseConfig = {
-        apiKey: "AIzaSyDuP65g_gbrsyRgTZ2Q5aUHVD8dHQpQJd4",
-        authDomain: "proyek-web-lapor-judol.firebaseapp.com",
+     const firebaseConfig = {
+         apiKey: "API_KEY_FIREBASE_ANDA",
+        authDomain: "DOMAIN_FIREBASE_ANDA.firebaseapp.com",
         projectId: "proyek-web-lapor-judol",
         storageBucket: "proyek-web-lapor-judol.firebasestorage.app",
         messagingSenderId: "403825393417",
