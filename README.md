@@ -1,54 +1,109 @@
-# LaporAman: Secure Online Gambling Reporting Platform 
+# LaporAman: Secure Online Gambling Reporting Platform
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white) ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black) ![Gemini AI](https://img.shields.io/badge/Gemini_AI-8E75B2?style=flat&logo=googlebard&logoColor=white) ![Security](https://img.shields.io/badge/AES--256-Encrypted-success.svg)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black)
+![Gemini AI](https://img.shields.io/badge/Gemini_AI-8E75B2?style=flat&logo=googlebard&logoColor=white)
+![Security](https://img.shields.io/badge/AES--256-Encrypted-success.svg)
 
-Developed as a final project for a Project Management course, **LaporAman** is a highly secure, full-stack whistleblower platform designed to report illegal online gambling sites safely. 
+> **Disclaimer:** This project was developed as a final project for the **Project Management course** at university. The mention of "PT. Meridian Digital" and collaborations with government agencies (Komdigi, POLRI) are part of the project's fictional business scenario/simulation. It is not an official government platform.
 
 ## 📌 Project Overview
-Protecting reporter identity is the highest priority when reporting cybercrime. This platform ensures complete anonymity by utilizing client-side **AES-256 encryption** for all Personally Identifiable Information (PII) before it ever reaches the database. The system includes a comprehensive user reporting flow, real-time ticket tracking, an AI-powered customer service chatbot, and a secure admin dashboard for managing submissions.
 
-## 🛠️ Tech Stack & Tools
-* **Frontend:** HTML5, Tailwind CSS, Lucide Icons
-* **Backend & BaaS:** Firebase (Firestore, Auth, Storage, Hosting)
-* **Security:** Crypto.js (AES Encryption), Cloudflare Turnstile (CAPTCHA)
-* **AI Integration:** Google Gemini 2.5 Flash API (Smart Chatbot)
-* **Utilities:** jsPDF (Automated Receipts), Marked.js (Markdown parsing)
+**LaporAman** is a secure, full-stack whistleblower platform prototype designed for reporting illegal online gambling sites. It was built to demonstrate proficiency in secure web development, project management principles, and modern cloud infrastructure integration.
+
+The platform prioritizes reporter anonymity using client-side **AES-256 encryption** for all Personally Identifiable Information (PII) before storage. It features a complete reporting flow, real-time ticket tracking, an AI-powered assistant (Gemini 3 Flash), and a secure admin dashboard.
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **HTML5 & Vanilla JS** - Modular architecture for clean separation of concerns.
+- **Tailwind CSS 4.x** - Modern utility-first styling.
+- **Lucide Icons** - Consistent UI iconography.
+
+### Backend & Security
+- **Firebase 12.x** - Authentication, Cloud Firestore, and Storage.
+- **Crypto.js** - Client-side AES-256 encryption for PII.
+- **Cloudflare Turnstile** - Privacy-friendly bot protection (CAPTCHA).
+- **Content Security Policy (CSP)** - Mitigation against XSS and data injection.
+
+### AI Integration
+- **Google Gemini 3 Flash** - Context-aware virtual assistant for user guidance.
+
+---
 
 ## 🚀 Key Features
-* **End-to-End PII Encryption:** Sensitive user data (NIK, Phone, Address) is encrypted directly in the browser. Only admins with the specific decryption key can unlock the data.
-* **Automated Image Security:** Uploaded evidence images are automatically compressed via HTML5 Canvas, stripping potentially identifying EXIF metadata before uploading to Firebase Storage.
-* **Real-Time Ticket Tracking:** Users receive a unique `Ticket ID` upon submission, allowing them to track the status of their report (New, Verified, Processed, Completed, Rejected).
-* **Smart AI Chatbot:** An integrated virtual assistant powered by Gemini AI that accesses real-time Firebase context to answer user queries about their report status.
-* **Admin Dashboard:** A restricted portal for authorized staff to manage reports, update ticket statuses, export data to CSV, and decrypt user profiles.
 
-## 📂 Repository Structure
-```text
-lapor-judol-platform/
-├── firebase.json          # Firebase deployment configuration
-├── index.html             # Main reporting interface
-├── admin.html             # Protected admin dashboard
-├── script.js              # Core logic, encryption, and AI integration
-├── admin.js               # Admin data management and CSV export
-├── style.css              # Custom styling and animations
-└── README.md
+- ✅ **End-to-End PII Protection:** Sensitive user data is encrypted in the browser.
+- ✅ **Anonymous Reporting:** Users can choose to hide their identity from public records.
+- ✅ **Secure Evidence Upload:** Automated image compression and EXIF metadata stripping.
+- ✅ **Real-Time Tracking:** Unique Ticket IDs with a status timeline for progress monitoring.
+- ✅ **AI Assistant:** Context-aware chatbot (Gemini 3 Flash) that helps users with the reporting process.
+- ✅ **Admin Dashboard:** Secure interface for managing reports, status updates, and data decryption.
+- ✅ **PDF Receipts:** Professional automated receipt generation for reported cases.
+
+---
+
+## 📂 Project Structure
+
+```
+Lapor-Aman/
+├── assets/
+│   └── img/                # Project images and logos
+├── css/
+│   └── style.css           # Custom styles and animations
+├── js/
+│   ├── admin.js            # Admin dashboard logic
+│   ├── auth.js             # Authentication and session management
+│   ├── chat.js             # AI chatbot integration
+│   ├── main.js             # Application entry point & orchestration
+│   ├── report.js           # Reporting logic & PDF generation
+│   ├── tracking.js         # Ticket tracking and timeline
+│   ├── ui.js               # UI components & interactions
+│   └── utils.js            # Shared helpers & security utilities
+├── docs/
+│   ├── DESIGN.md           # Design system documentation
+│   └── task.md             # Project task tracking
+├── index.html              # Main reporter interface
+├── admin.html              # Protected admin interface
+├── config.example.js       # Configuration template
+├── firebase.json           # Firebase configuration
+├── firestore.rules         # Security rules for Firestore
+└── storage.rules           # Security rules for Storage
 ```
 
-## 💻 How to Run Locally
+---
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/bennypepper/Lapor-Aman.git
-   cd lapor-aman
-   ```
+## 💻 Setup & Installation
 
-2. **Serve the application:**
-   Since this project uses ES Modules (`type="module"`) for Firebase, you cannot just open the HTML file directly in the browser due to CORS restrictions. You must serve it via a local web server. 
-   
-   If you have Python installed:
-   ```bash
-   python -m http.server 8000
-   ```
-   *Then navigate to `http://localhost:8000` in your browser.*
+### 1. Firebase Setup
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/).
+2. Enable **Authentication** (Email/Password), **Firestore**, and **Storage**.
+3. Copy your Web App configuration into the script tags in `index.html` and `admin.html`.
 
-3. **Admin Access:**
-   To access the admin panel and decrypt the mock data, log in with the authorized staff email and use the decryption key that you've set.
+### 2. Environment Configuration
+1. Copy `config.example.js` to `config.js`.
+2. Update `config.js` with your specific keys:
+   - `ENCRYPTION_KEY`: A strong 32-character string.
+   - `ADMIN_EMAIL`: Your email used for admin access.
+   - `GEMINI_API_KEY`: API key from [Google AI Studio](https://aistudio.google.com/).
+   - `TURNSTILE_SITE_KEY`: Site key from Cloudflare Turnstile.
+
+### 3. Deploy Rules
+Deploy the security rules to your Firebase project:
+```bash
+firebase deploy --only firestore:rules
+firebase deploy --only storage:rules
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Developed for educational purposes as part of the University Project Management Course.**

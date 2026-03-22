@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Define the admin email
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'staffmeridiandigital@gmail.com';
+    }
+
+    // Reports Collection
+    match /reports/{reportId} {
+      // Users can only read their own reports. Admins can read all.
+      allow read: if isAdmin() || (request.auth != null && resource.data.reporterUid == request.auth.uid);
+      
+      // Anyone logged in can create a report, but they must set themselves as the reporter
+      allow create: if request.auth != null && request.resource.data.reporterUid == request.auth.uid;
+      
+      // Only admins can update or delete reports (e.g. status changes)
+      allow update, delete: if isAdmin();
+    }
+    
+    // Users Collection (for storing encrypted profiles)
+    match /users/{userId} {
+      // Users can only read/write their own profile data. Admins can read all.
+      allow read: if isAdmin() || request.auth.uid == userId;
+      allow write: if request.auth.uid == userId;
+    }
+  }
+}
