@@ -56,19 +56,10 @@
 
 ## 4. Langkah Berikutnya (Next Steps)
 
-### A. Merge & Deploy Lapor-Aman:
-```bash
-git checkout main
-git merge renovation/nextjs-modernization
-git push origin main
-```
-Tambahkan environment variables di Vercel:
-- `OPENROUTER_API_KEY`: Kunci OpenRouter Anda
-- `OPENROUTER_MODEL`: `google/gemini-3.5-flash-lite`
-- `SERVER_ENCRYPTION_KEY`: Kunci 32 karakter minimum untuk enkripsi PII
-- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: `0x4AAAAAAB8Es5v_tBV9BFWn`
-- `ADMIN_EMAILS`: `benedictmpepper@gmail.com,staffmeridiandigital@gmail.com`
-- `DATABASE_URL`: (Opsional) Connection string PostgreSQL Neon/Supabase
+### A. Live Production Deployment:
+- **Live URL:** [https://lapor-aman-mu.vercel.app](https://lapor-aman-mu.vercel.app)
+- **Admin Portal:** [https://lapor-aman-mu.vercel.app/admin](https://lapor-aman-mu.vercel.app/admin)
+- **GitHub Repository:** [bennypepper/Lapor-Aman](https://github.com/bennypepper/Lapor-Aman) (`main`)
 
 ### B. Sprint 2: FitMate-Project:
 - Buka `C:\Users\Benny Pepper\Documents\GitHub\FitMate-Project`.
