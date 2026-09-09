@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Send, Upload, FileCheck, Download, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import jsPDF from "jspdf";
 import { clientConfig } from "@/lib/config";
@@ -15,6 +15,7 @@ export default function ReportForm({ user }: ReportFormProps) {
   const [category, setCategory] = useState("Situs Taruhan / Casino");
   const [details, setDetails] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +26,38 @@ export default function ReportForm({ user }: ReportFormProps) {
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const initTurnstile = () => {
+      if (typeof window !== "undefined" && (window as any).turnstile && turnstileContainerRef.current) {
+        try {
+          (window as any).turnstile.render(turnstileContainerRef.current, {
+            sitekey: clientConfig.turnstileSiteKey,
+            theme: "dark",
+            callback: (token: string) => {
+              setTurnstileToken(token);
+            },
+          });
+        } catch {
+          // Handled
+        }
+      }
+    };
+
+    if (typeof window !== "undefined" && (window as any).turnstile) {
+      initTurnstile();
+    } else {
+      const timer = setInterval(() => {
+        if (typeof window !== "undefined" && (window as any).turnstile) {
+          initTurnstile();
+          clearInterval(timer);
+        }
+      }, 500);
+      return () => clearInterval(timer);
+    }
+  }, []);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -133,6 +166,7 @@ export default function ReportForm({ user }: ReportFormProps) {
           category,
           details,
           isAnonymous,
+          turnstileToken,
           reporterUid: user?.uid || "anonymous",
           reporterEmail: user?.email || "",
           reporterName: isAnonymous ? "Anonim" : user?.displayName || user?.email?.split("@")[0] || "Pelapor",
@@ -289,6 +323,14 @@ export default function ReportForm({ user }: ReportFormProps) {
             <label htmlFor="anon-check" className="text-xs text-slate-300 cursor-pointer select-none">
               Kirim sebagai <span className="font-semibold text-cyan-400">Laporan Anonim</span> (nama dan kontak dirahasiakan total)
             </label>
+          </div>
+
+          {/* Cloudflare Turnstile CAPTCHA */}
+          <div className="pt-2 pb-1">
+            <div
+              ref={turnstileContainerRef}
+              className="min-h-[65px] flex items-center justify-center rounded-md border border-slate-800 bg-slate-900/30"
+            />
           </div>
 
           <button

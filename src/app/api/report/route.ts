@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateTicketId } from "@/lib/utils";
 import { encryptServerData } from "@/lib/crypto";
 import { serverDb } from "@/lib/firebase-server";
+import { serverConfig } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest) {
       details,
       evidenceUrl = null,
       isAnonymous = false,
+      turnstileToken = null,
       reporterUid = "anonymous",
       reporterEmail = "",
       reporterName = "Anonim",
@@ -19,6 +21,32 @@ export async function POST(req: NextRequest) {
       reporterNik = "",
       reporterAddress = "",
     } = body;
+
+    // Verify Turnstile CAPTCHA if secret key is present
+    if (serverConfig.turnstileSecretKey) {
+      if (!turnstileToken) {
+        return NextResponse.json(
+          { error: "Verifikasi CAPTCHA wajib diselesaikan." },
+          { status: 400 }
+        );
+      }
+
+      const verifyFormData = new URLSearchParams();
+      verifyFormData.append("secret", serverConfig.turnstileSecretKey);
+      verifyFormData.append("response", turnstileToken);
+
+      const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        body: verifyFormData,
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) {
+        return NextResponse.json(
+          { error: "Validasi CAPTCHA gagal. Silakan coba kembali." },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!websiteUrl || !details) {
       return NextResponse.json(

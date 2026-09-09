@@ -14,9 +14,12 @@ export const clientConfig = {
 
 export const serverConfig = {
   turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || "",
+  openRouterApiKey: process.env.OPENROUTER_API_KEY || "",
+  openRouterModel: process.env.OPENROUTER_MODEL || "google/gemini-3.5-flash-lite",
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   serverEncryptionKey: process.env.SERVER_ENCRYPTION_KEY || "lapor-aman-dev-secret-key-32-chars-min",
   adminEmails: (process.env.ADMIN_EMAILS || "benedictmpepper@gmail.com,staffmeridiandigital@gmail.com")
     .split(",")
     .map((e) => e.trim().toLowerCase()),
 };
+
