@@ -1,68 +1,76 @@
-# Session Handoff: Lapor-Aman Modernization & Architecture Renovation
+# Session Handoff: Lapor-Aman Modernization & Option A Architecture Migration
 
-**Tanggal:** 2026-09-09 | **Status:** Ready for Merge & Deployment / Ready for Sprint 2 (FitMate)  
+**Tanggal:** 2026-09-09 | **Status:** Option A Completed & Verified | Ready for Merge to Main & Transition to Sprint 2 (FitMate)  
 **Branch:** `renovation/nextjs-modernization`  
 **Repository:** `C:\Users\Benny Pepper\Documents\GitHub\Lapor-Aman`  
 
 ---
 
 ## 1. Konteks & Sasaran Utama (Goal & Scope)
-- **Problem Statement:** Repositori `Lapor-Aman` sebelumnya berupa monolithic static HTML/JS yang mengalami kegagalan 100% pada platform Vercel karena `config.js` tidak di-commit dan kredensial Firebase di `index.html` menggunakan placeholder (`API_KEY_FIREBASE_ANDA`). Selain itu, aplikasi memiliki kerentanan kritis `VibeSec` di mana `GEMINI_API_KEY` dan AES `ENCRYPTION_KEY` terekspos di browser client. Tampilan UI juga mengalami "AI slop" (warna neon cyber yang berlebihan, emoji text pada UI, dan card inception bertingkat).
-- **Solution Delivered:** Berhasil merombak arsitektur menjadi **Next.js 15 (App Router)** + **React 19** + **Tailwind CSS v4** dengan isolasi keamanan serverless (`/api/chat`, `/api/verify-turnstile`, `/api/report`, `/api/track/[ticketId]`, `/api/admin/reports`).
+- **Problem Statement:** Repositori `Lapor-Aman` sebelumnya berupa arsitektur hybrid rapuh yang memadukan Firebase Hosting/Firestore dengan Vercel, menyebabkan kegagalan otentikasi (`PERMISSION_DENIED` dan ketiadaan Google Cloud Service Account di Vercel).
+- **Solution Delivered (Option A):** Berhasil memigrasikan arsitektur secara penuh ke **100% Vercel + PostgreSQL / Drizzle ORM + Serverless Auth**, menyingkirkan ketergantungan Firebase secara total.
 
 ---
 
 ## 2. Pekerjaan yang Telah Selesai (Completed Work)
-1. **Preservasi Proyek Lama:** Seluruh berkas lama (`index.html`, `admin.html`, `404.html`, `js/`, `css/`, `manifest.json`) telah diarsipkan dengan aman ke direktori `legacy_backup/`.
-2. **Koneksi Firebase Asli Ditemukan:** Melalui integrasi Firebase CLI yang telah login (`benedictmpepper@gmail.com`), kredensial resmi untuk project `lapor-aman-web-2026` dan App ID `1:623106906854:web:3965aab08b19b09cde7927` berhasil dipetakan ke `.env.local` dan `.env.example`.
-3. **Pemberantasan Secret Leakage & Integrasi AI Modern:**
-   - Asisten AI diintegrasikan via **OpenRouter API** menggunakan model terbaru **`google/gemini-3.5-flash-lite`** pada serverless route `/api/chat`. Kunci API disimpan eksklusif pada `.env.local` (tidak pernah masuk git bundle).
-   - **Rate Limiting & Guardrails:** Proteksi sliding-window per IP (maksimal 6 pesan/menit), batas panjang input (maksimal 500 karakter), dan deteksi prompt injection otomatis untuk mencegah eksploitasi token.
-   - **Cloudflare Turnstile:** Widget interaktif dirender pada formulir pelaporan dengan validasi token otomatis.
-   - **Enkripsi PII:** Enkripsi AES-256 server-side untuk identitas pelapor (Nomor Ponsel, NIK, Alamat) sebelum penyimpanan Firestore.
-4. **Desain Antarmuka Terstandarisasi:**
-   - Palet warna institusional: Slate gelap (`#070b12`, `#0c121e`, `#1e293b`).
-   - Ikonografi: Pure monochrome SVG micro-icons (`lucide-react`, 14–16px, 1.5–2px stroke).
-   - Dokumentasi publik (`README.md`) dirapikan dengan nada profesional tingkat produksi tanpa istilah internal audit.
-   - Pembangkitan tanda terima tiket format PDF (`jspdf`) langsung di sisi client secara instan.
-5. **Admin Verification Dashboard:**
-   - Halaman `/admin` dengan autentikasi akun verifikator, filter status pengaduan, pengubahan status (`DIVERIFIKASI`, `DITINDAKLANJUTI`, `SELESAI`, `DITOLAK`), fitur dekripsi PII dengan pass-key admin, dan ekspor data laporan ke CSV.
+1. **Pemberantasan Total Firebase:**
+   - Menghapus paket `firebase` dan `firebase-admin`.
+   - Menghapus `src/lib/firebase-client.ts` dan `src/lib/firebase-server.ts`.
+   - Menghapus konfigurasi client-side Firebase di `src/lib/config.ts`.
+2. **Arsitektur Database Drizzle ORM & Dual-Mode Store:**
+   - `src/db/schema.ts`: Skema tabel `users`, `reports`, dan `status_history`.
+   - `src/db/index.ts`: Koneksi serverless Neon HTTP (`@neondatabase/serverless`).
+   - `src/db/repo.ts`: Lapisan repositori cerdas yang otomatis menggunakan PostgreSQL/Drizzle saat `DATABASE_URL` tersedia, dan beralih ke persistent local store (`data/lapor_aman_db.json`) untuk pengujian lokal turnkey instan.
+3. **Autentikasi Serverless & Enkripsi PII AES-256:**
+   - `src/lib/auth.ts`: Manajemen sesi JWT dengan library `jose`, disimpan pada cookie aman berbendera `httpOnly`.
+   - `src/app/api/auth/register`: Validasi 16 digit NIK, hashing kata sandi dengan `bcryptjs`, dan enkripsi AES-256 sisi server untuk data sensitif pelapor (NIK, No Telp, Alamat Domisili).
+   - `src/app/api/auth/login`, `/logout`, `/me`: Sesi aman untuk warga dan verifikator admin.
+4. **Endpoint Pemulihan Fitur:**
+   - `/api/report`: Penyimpanan aduan ke Drizzle DB, validasi Turnstile CAPTCHA, dan asosiasi tiket dengan akun warga.
+   - `/api/track/[ticketId]`: Pelacakan publik yang aman (PII dirahasiakan total).
+   - `/api/user/reports`: Tab "Riwayat Laporan Saya" untuk warga yang telah masuk.
+   - `/api/admin/reports` & `/api/admin/reports/[ticketId]`: Dashboard verifikasi penegakan hukum, dekripsi PII dengan passkey admin, dan pembaruan status aduan.
+   - `/api/chat`: Asisten cerdas OpenRouter `google/gemini-3.5-flash-lite` dengan sliding-window rate limiter (6 req/menit per IP) dan pencegahan prompt injection.
+5. **Penyempurnaan UI/UX:**
+   - Notifikasi global Sonner `<Toaster />` bertema gelap.
+   - Tombol 1-klik salin nomor tiket dengan umpan balik visual dan toast.
+   - Menu hamburger navigasi mobile responsif untuk layar `< 768px`.
+   - Dasbor "Riwayat Laporan Saya" untuk warga.
 
 ---
 
-## 3. Daftar Berkas Kunci yang Dimodifikasi / Dibuat
-- `src/lib/rate-limiter.ts`: Sliding-window rate limiter dan filter prompt safety.
-- `src/app/api/chat/route.ts`: Endpoint AI asisten dengan rate limiting dan OpenRouter Gemini 3.5 Flash Lite.
-- `src/components/ReportForm.tsx`: Formulir pengaduan dengan widget Turnstile dan generator PDF.
-- `src/app/api/report/route.ts`: Endpoint penyimpanan laporan dengan validasi Turnstile dan enkripsi AES-256.
-- `README.md`: Dokumentasi proyek yang telah dipoles secara profesional.
-- `package.json`, `next.config.mjs`, `.env.example`, `.env.local`, `src/lib/config.ts`.
-
----
-
-## 4. Status Pengujian & Verifikasi (Test Verification State)
+## 3. Status Pengujian & Verifikasi (Test Verification State)
 - **TypeScript Compilation:** `npx tsc --noEmit` $\rightarrow$ **Exit code 0 (0 errors)**.
-- **Production Build:** `npm run build` $\rightarrow$ **Exit code 0 (Compiled successfully, all 9 routes generated without warnings)**.
-- **Git State:** Committed on branch `renovation/nextjs-modernization` (Commit `0297911`).
+- **Production Build:** `npm run build` $\rightarrow$ **Exit code 0 (14/14 static and dynamic routes compiled)**.
+- **End-to-End Test Suite:**
+  - Registrasi warga & hashing bcrypt: `PASS`
+  - Pengiriman aduan terenkripsi & pembuatan tiket: `PASS`
+  - Pelacakan publik tanpa kebocoran PII: `PASS`
+  - Riwayat akun warga (`/api/user/reports`): `PASS`
+  - Registrasi & otentikasi admin: `PASS`
+  - Dekripsi PII di portal verifikator: `PASS`
+  - Pembaruan status aduan dan audit trail: `PASS`
+- **Git State:** Committed pada branch `renovation/nextjs-modernization` (Commit `88d3c27`).
 
 ---
 
-## 5. Tugas Berikutnya & Perintah Pertama (Next Steps & First Command)
+## 4. Langkah Berikutnya (Next Steps)
 
-### Untuk Lapor-Aman:
-- [ ] Merge branch `renovation/nextjs-modernization` ke `main` jika disetujui.
-- [ ] Deploy ke Vercel dengan menambahkan `GEMINI_API_KEY`, `TURNSTILE_SECRET_KEY`, dan `SERVER_ENCRYPTION_KEY` di Vercel Environment Variables.
-
-### Untuk Sprint 2 (FitMate-Project):
-- [ ] Buka `C:\Users\Benny Pepper\Documents\GitHub\FitMate-Project`.
-- [ ] Bangun **Keep-Alive Script / GitHub Actions Cron Workflow** untuk mem-ping dan mengeksekusi lightweight query ke Supabase/PostgreSQL agar database gratis tidak tersuspensi karena inaktivitas.
-- [ ] Modernisasi tampilan UI PWA FitMate agar bebas dari AI slop.
-
-**Perintah Pertama yang Harus Dijalankan Sesi Berikutnya (untuk menguji dev server Lapor-Aman):**
+### A. Merge & Deploy Lapor-Aman:
 ```bash
-cd "C:\Users\Benny Pepper\Documents\GitHub\Lapor-Aman" && npm run dev
+git checkout main
+git merge renovation/nextjs-modernization
+git push origin main
 ```
-atau untuk langsung beralih ke Sprint 2 (FitMate):
-```bash
-cd "C:\Users\Benny Pepper\Documents\GitHub\FitMate-Project"
-```
+Tambahkan environment variables di Vercel:
+- `OPENROUTER_API_KEY`: Kunci OpenRouter Anda
+- `OPENROUTER_MODEL`: `google/gemini-3.5-flash-lite`
+- `SERVER_ENCRYPTION_KEY`: Kunci 32 karakter minimum untuk enkripsi PII
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: `0x4AAAAAAB8Es5v_tBV9BFWn`
+- `ADMIN_EMAILS`: `benedictmpepper@gmail.com,staffmeridiandigital@gmail.com`
+- `DATABASE_URL`: (Opsional) Connection string PostgreSQL Neon/Supabase
+
+### B. Sprint 2: FitMate-Project:
+- Buka `C:\Users\Benny Pepper\Documents\GitHub\FitMate-Project`.
+- Buat keep-alive script / GitHub Actions cron job agar database Supabase tidak tersuspensi otomatis karena inaktivitas.
+- Audit dan perbaiki arsitektur serta UI/UX PWA FitMate.
