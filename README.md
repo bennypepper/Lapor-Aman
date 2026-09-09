@@ -1,109 +1,95 @@
-# LaporAman: Secure Online Gambling Reporting Platform
+# Lapor-Aman: Secure Online Gambling Reporting Platform
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black)
-![Gemini AI](https://img.shields.io/badge/Gemini_AI-8E75B2?style=flat&logo=googlebard&logoColor=white)
-![Security](https://img.shields.io/badge/AES--256-Encrypted-success.svg)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react&logoColor=white)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-v11-FFCA28?style=flat&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Gemini AI](https://img.shields.io/badge/Gemini_1.5_Flash-Serverless-8E75B2?style=flat&logo=googlebard&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Security](https://img.shields.io/badge/AES--256-Server--Side_Encrypted-success.svg)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
 
-> **Disclaimer:** This project was developed as a final project for the **Project Management course** at university. The mention of "PT. Meridian Digital" and collaborations with government agencies (Komdigi, POLRI) are part of the project's fictional business scenario/simulation. It is not an official government platform.
-
-## 📌 Project Overview
-
-**LaporAman** is a secure, full-stack whistleblower platform prototype designed for reporting illegal online gambling sites. It was built to demonstrate proficiency in secure web development, project management principles, and modern cloud infrastructure integration.
-
-The platform prioritizes reporter anonymity using client-side **AES-256 encryption** for all Personally Identifiable Information (PII) before storage. It features a complete reporting flow, real-time ticket tracking, an AI-powered assistant (Gemini 3 Flash), and a secure admin dashboard.
+> **Academic & Simulation Disclaimer:** This project was developed as a comprehensive engineering showcase and course capstone project. The mention of collaborative simulations with government agencies (Komdigi, POLRI) reflects scenario modeling.
 
 ---
 
-## 🛠️ Tech Stack
+## 1. System Overview & Modernization
 
-### Frontend
-- **HTML5 & Vanilla JS** - Modular architecture for clean separation of concerns.
-- **Tailwind CSS 4.x** - Modern utility-first styling.
-- **Lucide Icons** - Consistent UI iconography.
+**Lapor-Aman** is a production-grade whistleblower platform engineered to report illegal online gambling operations, predatory endorsement links, and mule bank accounts. 
 
-### Backend & Security
-- **Firebase 12.x** - Authentication, Cloud Firestore, and Storage.
-- **Crypto.js** - Client-side AES-256 encryption for PII.
-- **Cloudflare Turnstile** - Privacy-friendly bot protection (CAPTCHA).
-- **Content Security Policy (CSP)** - Mitigation against XSS and data injection.
-
-### AI Integration
-- **Google Gemini 3 Flash** - Context-aware virtual assistant for user guidance.
-
----
-
-## 🚀 Key Features
-
-- ✅ **End-to-End PII Protection:** Sensitive user data is encrypted in the browser.
-- ✅ **Anonymous Reporting:** Users can choose to hide their identity from public records.
-- ✅ **Secure Evidence Upload:** Automated image compression and EXIF metadata stripping.
-- ✅ **Real-Time Tracking:** Unique Ticket IDs with a status timeline for progress monitoring.
-- ✅ **AI Assistant:** Context-aware chatbot (Gemini 3 Flash) that helps users with the reporting process.
-- ✅ **Admin Dashboard:** Secure interface for managing reports, status updates, and data decryption.
-- ✅ **PDF Receipts:** Professional automated receipt generation for reported cases.
-
----
-
-## 📂 Project Structure
+Originally created as a monolithic vanilla JavaScript SPA, **v2.0** has been completely overhauled into a modern **Next.js (App Router)** architecture to solve critical security vulnerabilities, eliminate client-side secret exposure, and deliver a clinical, high-contrast, anti-"AI slop" user interface.
 
 ```
-Lapor-Aman/
-├── assets/
-│   └── img/                # Project images and logos
-├── css/
-│   └── style.css           # Custom styles and animations
-├── js/
-│   ├── admin.js            # Admin dashboard logic
-│   ├── auth.js             # Authentication and session management
-│   ├── chat.js             # AI chatbot integration
-│   ├── main.js             # Application entry point & orchestration
-│   ├── report.js           # Reporting logic & PDF generation
-│   ├── tracking.js         # Ticket tracking and timeline
-│   ├── ui.js               # UI components & interactions
-│   └── utils.js            # Shared helpers & security utilities
-├── docs/
-│   ├── DESIGN.md           # Design system documentation
-│   └── task.md             # Project task tracking
-├── index.html              # Main reporter interface
-├── admin.html              # Protected admin interface
-├── config.example.js       # Configuration template
-├── firebase.json           # Firebase configuration
-├── firestore.rules         # Security rules for Firestore
-└── storage.rules           # Security rules for Storage
+[ Client Browser (Next.js 15 / React 19) ]
+                     |
+       +-------------+-------------+
+       |                           |
+POST /api/chat             POST /api/report
+       |                           |
+[ Gemini 1.5 Flash ]       [ Server-Side AES-256 ]
+  (Server Secret)                 |
+                           [ Cloud Firestore ]
 ```
 
 ---
 
-## 💻 Setup & Installation
+## 2. Key Architecture & Security Hardening
 
-### 1. Firebase Setup
-1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/).
-2. Enable **Authentication** (Email/Password), **Firestore**, and **Storage**.
-3. Copy your Web App configuration into the script tags in `index.html` and `admin.html`.
+- **Zero Client-Side Secret Exposure:** All sensitive credentials (`GEMINI_API_KEY`, AES `SERVER_ENCRYPTION_KEY`, Cloudflare Turnstile private keys) are encapsulated strictly within serverless API routes (`/api/*`).
+- **Server-Side AES-256 PII Encryption:** Sensitive reporter fields (Phone, NIK, Home Address) are encrypted on the server before being committed to Cloud Firestore, eliminating plain-text PII leakage.
+- **Turnkey Cloudflare Turnstile Bot Defense:** Server-to-server validation prevents spam automation and ticket exhaustion attacks.
+- **Virtual CS Assistant (Gemini 1.5 Flash):** Context-aware customer service virtual agent operating under strict behavioral bounds and prompt injection defenses.
+- **Client-Side PDF Ticket Generation:** Instant, verifiable PDF receipt (`jspdf`) with ticket numbers for tracking.
+- **Admin Verification Portal:** Role-gated dashboard with status transition audit trails, on-demand AES decryption tool, and structured CSV export.
 
-### 2. Environment Configuration
-1. Copy `config.example.js` to `config.js`.
-2. Update `config.js` with your specific keys:
-   - `ENCRYPTION_KEY`: A strong 32-character string.
-   - `ADMIN_EMAIL`: Your email used for admin access.
-   - `GEMINI_API_KEY`: API key from [Google AI Studio](https://aistudio.google.com/).
-   - `TURNSTILE_SITE_KEY`: Site key from Cloudflare Turnstile.
+---
 
-### 3. Deploy Rules
-Deploy the security rules to your Firebase project:
+## 3. Tech Stack
+
+- **Framework:** Next.js 15 (App Router), React 19, TypeScript
+- **Styling:** Tailwind CSS v4, Lucide React (monochrome micro-icons)
+- **Database & Auth:** Firebase Web SDK v11, Cloud Firestore, Firebase Storage
+- **AI & Security:** Google Generative AI SDK, CryptoJS, Cloudflare Turnstile
+
+---
+
+## 4. Getting Started
+
+### Prerequisites
+- Node.js 18.18+ or 20+
+- npm 10+
+
+### Installation & Local Run
 ```bash
-firebase deploy --only firestore:rules
-firebase deploy --only storage:rules
+# 1. Clone repository
+git clone https://github.com/bennypepper/Lapor-Aman.git
+cd Lapor-Aman
+
+# 2. Install dependencies
+npm install
+
+# 3. Setup environment variables
+cp .env.example .env.local
+
+# 4. Start development server
+npm run dev
 ```
+Navigate to `http://localhost:3000`.
 
 ---
 
-## 📄 License
+## 5. Environment Variables Reference
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+| Variable | Scope | Purpose |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Client | Firebase client SDK authentication |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID`| Client | Firestore and Storage target project |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile public site key |
+| `TURNSTILE_SECRET_KEY` | Server | Turnstile server-to-server verification |
+| `GEMINI_API_KEY` | Server | Gemini 1.5 Flash AI Assistant |
+| `SERVER_ENCRYPTION_KEY` | Server | AES-256 symmetric key for reporter PII |
+| `ADMIN_EMAILS` | Server | Comma-separated admin authorized emails |
 
 ---
 
-**Developed for educational purposes as part of the University Project Management Course.**
+## 6. License & Authorship
+
+Developed and engineered by **Benny Pepper** ([@bennypepper](https://github.com/bennypepper)). Licensed under the Apache License 2.0.

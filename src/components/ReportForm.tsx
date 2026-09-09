@@ -1,0 +1,310 @@
+"use client";
+
+import { useState, useRef } from "react";
+import { Send, Upload, FileCheck, Download, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
+import jsPDF from "jspdf";
+import { clientConfig } from "@/lib/config";
+
+interface ReportFormProps {
+  user: any;
+  onSuccess?: (ticketId: string) => void;
+}
+
+export default function ReportForm({ user }: ReportFormProps) {
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [category, setCategory] = useState("Situs Taruhan / Casino");
+  const [details, setDetails] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successData, setSuccessData] = useState<{
+    ticketId: string;
+    websiteUrl: string;
+    createdAt: string;
+  } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0];
+      if (selected.size > 5 * 1024 * 1024) {
+        setError("Ukuran bukti tangkapan layar maksimal 5MB.");
+        return;
+      }
+      setFile(selected);
+      setError(null);
+    }
+  };
+
+  const handleDownloadPdf = (ticketId: string, siteUrl: string, desc: string) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Navy border
+    doc.setLineWidth(1.2);
+    doc.setDrawColor(15, 23, 42);
+    doc.rect(8, 8, pageWidth - 16, doc.internal.pageSize.getHeight() - 16);
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Lapor-Aman", pageWidth / 2, 26, { align: "center" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Platform Pengaduan Resmi Aktivitas Judi Online Indonesia", pageWidth / 2, 33, { align: "center" });
+    doc.text("Tanda Terima Laporan Terverifikasi", pageWidth / 2, 38, { align: "center" });
+
+    // Divider
+    doc.setLineWidth(0.4);
+    doc.setDrawColor(203, 213, 225);
+    doc.line(16, 45, pageWidth - 16, 45);
+
+    // Ticket Box
+    doc.setFillColor(241, 245, 249);
+    doc.rect(16, 52, pageWidth - 32, 22, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("NOMOR TIKET LAPORAN:", 22, 61);
+    doc.setFontSize(14);
+    doc.setTextColor(14, 116, 144);
+    doc.text(ticketId, 22, 69);
+
+    // Metadata
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+
+    let y = 88;
+    const addRow = (label: string, value: string) => {
+      doc.setFont("helvetica", "bold");
+      doc.text(label, 20, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(value, 60, y);
+      y += 10;
+    };
+
+    addRow("Waktu Masuk:", new Date().toLocaleString("id-ID"));
+    addRow("Kategori:", category);
+    addRow("Situs Dilaporkan:", siteUrl);
+    addRow("Identitas:", isAnonymous ? "Anonim (Dilindungi)" : user?.email || "Terdaftar");
+
+    y += 5;
+    doc.setFont("helvetica", "bold");
+    doc.text("Ringkasan Laporan:", 20, y);
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    const splitDetails = doc.splitTextToSize(desc, pageWidth - 40);
+    doc.text(splitDetails, 20, y);
+
+    // Footer
+    const footerY = doc.internal.pageSize.getHeight() - 25;
+    doc.setLineWidth(0.3);
+    doc.line(16, footerY - 5, pageWidth - 16, footerY - 5);
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Bukti tanda terima ini sah secara elektronik sesuai UU ITE.", 20, footerY);
+    doc.text(`Dicetak: ${new Date().toISOString()}`, pageWidth - 20, footerY, { align: "right" });
+
+    doc.save(`Tanda_Terima_${ticketId}.pdf`);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!websiteUrl.trim() || !details.trim()) {
+      setError("Mohon lengkapi URL website dan deskripsi temuan.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      // Direct call to our secure serverless endpoint
+      const response = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          websiteUrl,
+          category,
+          details,
+          isAnonymous,
+          reporterUid: user?.uid || "anonymous",
+          reporterEmail: user?.email || "",
+          reporterName: isAnonymous ? "Anonim" : user?.displayName || user?.email?.split("@")[0] || "Pelapor",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal mengirim laporan.");
+      }
+
+      setSuccessData({
+        ticketId: data.ticketId,
+        websiteUrl: data.websiteUrl,
+        createdAt: data.createdAt,
+      });
+
+      // Clear form inputs
+      setWebsiteUrl("");
+      setDetails("");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err: any) {
+      setError(err.message || "Terjadi kesalahan sistem saat mengirim laporan.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div id="lapor" className="rounded-lg border border-slate-800 bg-[#0c121e] p-6 sm:p-8">
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-cyan-400" />
+          Formulir Pengaduan Situs Judi Online
+        </h2>
+        <p className="mt-1 text-xs text-slate-400">
+          Laporkan link situs perjudian, iklan sponsor ilegal, atau rekening bandar. Identitas Anda dienkripsi secara server-side (AES-256).
+        </p>
+      </div>
+
+      {successData ? (
+        <div className="rounded-md border border-emerald-900/60 bg-emerald-950/30 p-6 text-center">
+          <CheckCircle className="mx-auto h-10 w-10 text-emerald-400 mb-3" />
+          <h3 className="text-base font-semibold text-white">Laporan Berhasil Disimpan</h3>
+          <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto">
+            Terima kasih atas partisipasi Anda. Laporan telah masuk ke antrean verifikasi dan segera diproses.
+          </p>
+
+          <div className="mt-4 inline-block rounded-md border border-slate-800 bg-slate-900 px-4 py-2 font-mono text-sm text-cyan-300 font-bold">
+            {successData.ticketId}
+          </div>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              onClick={() => handleDownloadPdf(successData.ticketId, successData.websiteUrl, details || "Laporan Judi Online")}
+              className="flex items-center gap-2 rounded-md bg-cyan-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-cyan-500"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Unduh Tanda Terima PDF
+            </button>
+            <button
+              onClick={() => setSuccessData(null)}
+              className="rounded-md border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition"
+            >
+              Kirim Laporan Lain
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 rounded-md border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              URL / Tautan Situs yang Dilaporkan <span className="text-rose-400">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="https://situs-tersangka.com atau nama domain"
+              className="w-full rounded-md border border-slate-700 bg-slate-900/80 px-3.5 py-2 text-xs font-mono text-white placeholder-slate-500 transition focus:border-cyan-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Kategori Pelanggaran</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs text-slate-200 transition focus:border-cyan-500"
+              >
+                <option>Situs Taruhan / Casino Online</option>
+                <option>Slot Gacor / Game Ilegal</option>
+                <option>Iklan Sponsor / Endorsement Medsos</option>
+                <option>Rekening Bank / E-Wallet Bandar</option>
+                <option>Aplikasi APK Judi Mobile</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Bukti Tangkapan Layar (Opsional)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-slate-700 bg-slate-900/50 px-3 py-1.5 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200 transition"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  <span className="truncate">{file ? file.name : "Pilih gambar (Max 5MB)"}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              Deskripsi Kronologi & Temuan <span className="text-rose-400">*</span>
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="Jelaskan bagaimana Anda menemukan situs ini, nomor rekening yang tertera, atau modus promosi yang digunakan..."
+              className="w-full rounded-md border border-slate-700 bg-slate-900/80 p-3 text-xs text-white placeholder-slate-500 transition focus:border-cyan-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 py-1">
+            <input
+              type="checkbox"
+              id="anon-check"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-cyan-600 focus:ring-cyan-500 focus:ring-offset-slate-950"
+            />
+            <label htmlFor="anon-check" className="text-xs text-slate-300 cursor-pointer select-none">
+              Kirim sebagai <span className="font-semibold text-cyan-400">Laporan Anonim</span> (nama dan kontak dirahasiakan total)
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-5 py-2.5 text-xs font-medium text-white shadow-sm transition hover:bg-cyan-500 disabled:opacity-50"
+          >
+            {submitting ? (
+              <FileCheck className="h-3.5 w-3.5 animate-pulse" />
+            ) : (
+              <Send className="h-3.5 w-3.5 stroke-[2]" />
+            )}
+            {submitting ? "Memproses Laporan..." : "Kirim Pengaduan Resmi"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
