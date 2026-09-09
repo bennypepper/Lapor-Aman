@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { MessageSquare, X, Send, Bot, User, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -18,7 +19,14 @@ export default function ChatDrawer() {
     {
       id: "welcome",
       sender: "bot",
-      text: "Halo! Saya asisten virtual Lapor-Aman. Ada yang dapat saya bantu terkait tata cara pelaporan, privasi data, atau pengecekan status pengaduan?",
+      text: `Halo! Selamat datang di **Lapor-Aman**, platform pengaduan masyarakat resmi untuk bersama-sama memberantas situs dan konten perjudian online di Indonesia.
+
+Ada yang bisa saya bantu hari ini? Anda dapat menanyakan tentang:
+* Alur cara melaporkan situs judi online
+* Keamanan dan privasi data pelapor (enkripsi AES-256)
+* Edukasi seputar bahaya judi online
+
+Silakan sampaikan pertanyaan atau laporan Anda.`,
       time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -92,7 +100,7 @@ export default function ChatDrawer() {
 
       {/* Chat Window Drawer */}
       {isOpen && (
-        <div className="fixed bottom-20 right-5 z-50 flex h-[500px] w-[360px] max-w-[calc(100vw-40px)] flex-col rounded-lg border border-slate-800 bg-[#090e17] shadow-2xl overflow-hidden">
+        <div className="fixed bottom-20 right-5 z-50 flex h-[520px] w-[380px] max-w-[calc(100vw-32px)] flex-col rounded-lg border border-slate-800 bg-[#090e17] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-200">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-800 bg-[#0c131f] px-4 py-3">
             <div className="flex items-center gap-2.5">
@@ -138,13 +146,51 @@ export default function ChatDrawer() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-md p-3 leading-relaxed ${
+                  className={`max-w-[85%] rounded-md p-3 leading-relaxed ${
                     m.sender === "user"
                       ? "bg-cyan-600 text-white"
                       : "border border-slate-800 bg-[#0f172a] text-slate-200"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{m.text}</p>
+                  {m.sender === "user" ? (
+                    <p className="whitespace-pre-wrap">{m.text}</p>
+                  ) : (
+                    <div className="space-y-2 text-xs leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>,
+                          strong: ({ children }) => (
+                            <strong className="font-semibold text-cyan-300">{children}</strong>
+                          ),
+                          em: ({ children }) => <em className="italic text-slate-300">{children}</em>,
+                          ul: ({ children }) => (
+                            <ul className="my-1.5 ml-4 list-disc space-y-1 text-slate-300">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="my-1.5 ml-4 list-decimal space-y-1 text-slate-300">{children}</ol>
+                          ),
+                          li: ({ children }) => <li className="leading-relaxed pl-0.5">{children}</li>,
+                          a: ({ href, children }) => (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-cyan-400 underline hover:text-cyan-300"
+                            >
+                              {children}
+                            </a>
+                          ),
+                          code: ({ children }) => (
+                            <code className="rounded bg-slate-800 px-1 py-0.5 font-mono text-[11px] text-cyan-300">
+                              {children}
+                            </code>
+                          ),
+                        }}
+                      >
+                        {m.text}
+                      </ReactMarkdown>
+                    </div>
+                  )}
                   <span className="block mt-1 text-[9px] text-slate-400 text-right">{m.time}</span>
                 </div>
                 {m.sender === "user" && (
