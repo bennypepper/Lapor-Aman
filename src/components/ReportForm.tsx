@@ -38,11 +38,25 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
     createdAt: string;
   } | null>(null);
 
+  const [turnstileActivated, setTurnstileActivated] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
+  // Activate Turnstile only when user fills mandatory fields (URL & details)
+  const isFormFilled = websiteUrl.trim().length >= 3 && details.trim().length >= 5;
+
   useEffect(() => {
+    if (isFormFilled && !turnstileActivated) {
+      setTurnstileActivated(true);
+    }
+  }, [isFormFilled, turnstileActivated]);
+
+  // Mount Turnstile widget smoothly once activated
+  useEffect(() => {
+    if (!turnstileActivated) return;
+
     let timer: NodeJS.Timeout | null = null;
     let isMounted = true;
 
@@ -84,14 +98,14 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
           renderTurnstile();
           if (timer) clearInterval(timer);
         }
-      }, 250);
+      }, 150);
     }
 
     return () => {
       isMounted = false;
       if (timer) clearInterval(timer);
     };
-  }, []);
+  }, [turnstileActivated]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -194,6 +208,11 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
       return;
     }
 
+    if (!turnstileToken) {
+      setError("Silakan selesaikan verifikasi keamanan CAPTCHA terlebih dahulu.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -227,11 +246,19 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
       toast.success("Laporan berhasil dikirim!");
       if (onSuccess) onSuccess(data.ticketId);
 
-      // Clear form inputs
+      // Clear form inputs and reset turnstile
       setWebsiteUrl("");
       setDetails("");
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setTurnstileActivated(false);
+      setTurnstileToken(null);
+      if (widgetIdRef.current && typeof window !== "undefined" && (window as any).turnstile) {
+        try {
+          (window as any).turnstile.remove(widgetIdRef.current);
+        } catch {}
+        widgetIdRef.current = null;
+      }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan sistem saat mengirim laporan.");
     } finally {
@@ -293,7 +320,12 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
               Unduh Tanda Terima PDF
             </button>
             <button
-              onClick={() => setSuccessData(null)}
+              onClick={() => {
+                setSuccessData(null);
+                setTurnstileActivated(false);
+                setTurnstileToken(null);
+                widgetIdRef.current = null;
+              }}
               className="rounded-md border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition"
             >
               Kirim Laporan Lain
@@ -388,12 +420,43 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
             </label>
           </div>
 
-          {/* Cloudflare Turnstile CAPTCHA */}
+          {/* Cloudflare Turnstile CAPTCHA (Lazy-Loaded with Skeleton Placeholder) */}
           <div className="pt-2 pb-1">
-            <div
-              ref={turnstileContainerRef}
-              className="min-h-[65px] flex items-center justify-center rounded-md border border-slate-800 bg-slate-900/30"
-            />
+            {!turnstileActivated ? (
+              <div className="rounded-md border border-slate-800/80 bg-slate-900/40 px-4 py-3 min-h-[65px] flex items-center justify-between gap-3 text-slate-400 transition-all duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                    <ShieldCheck className="h-4 w-4 text-cyan-500/70" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-slate-300">Verifikasi Keamanan CAPTCHA</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Cloudflare</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Lengkapi URL dan deskripsi temuan di atas untuk memicu verifikasi keamanan.
+                    </p>
+                  </div>
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-slate-600" />
+                  <span className="text-[11px] text-slate-500 font-mono">Menunggu Form</span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md border border-slate-800 bg-slate-900/40 p-2 min-h-[65px] flex flex-col items-center justify-center transition-all duration-300">
+                <div
+                  ref={turnstileContainerRef}
+                  className="min-h-[65px] w-full flex items-center justify-center"
+                />
+                {!turnstileToken && (
+                  <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+                    Memproses tantangan keamanan Cloudflare...
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <button

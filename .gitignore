@@ -79,3 +79,4 @@ data/
 .dataconnect
 config.js
 
+.vercel

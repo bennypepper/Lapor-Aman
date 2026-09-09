@@ -9,7 +9,33 @@ import { isValidNIK, isValidPhone } from "@/lib/utils";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password, fullname, nik, phone, address } = body;
+    const { email, password, fullname, nik, phone, address, turnstileToken } = body;
+
+    // Verify Turnstile CAPTCHA if secret key is configured
+    if (serverConfig.turnstileSecretKey) {
+      if (!turnstileToken) {
+        return NextResponse.json(
+          { error: "Verifikasi CAPTCHA wajib diselesaikan untuk pendaftaran akun baru." },
+          { status: 400 }
+        );
+      }
+
+      const verifyFormData = new URLSearchParams();
+      verifyFormData.append("secret", serverConfig.turnstileSecretKey);
+      verifyFormData.append("response", turnstileToken);
+
+      const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        body: verifyFormData,
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) {
+        return NextResponse.json(
+          { error: "Validasi CAPTCHA gagal. Silakan coba kembali." },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!email || !password || !fullname || !nik || !phone || !address) {
       return NextResponse.json(
