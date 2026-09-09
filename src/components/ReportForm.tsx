@@ -40,35 +40,57 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const initTurnstile = () => {
-      if (typeof window !== "undefined" && (window as any).turnstile && turnstileContainerRef.current) {
+    let timer: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
+    const renderTurnstile = () => {
+      if (!isMounted) return;
+      const turnstile = (window as any).turnstile;
+      const container = turnstileContainerRef.current;
+
+      if (turnstile && container) {
+        if (widgetIdRef.current || container.children.length > 0) return;
+
         try {
-          (window as any).turnstile.render(turnstileContainerRef.current, {
-            sitekey: clientConfig.turnstileSiteKey,
+          const sitekey = (clientConfig.turnstileSiteKey || "0x4AAAAAAB8Es5v_tBV9BFWn").trim();
+          const id = turnstile.render(container, {
+            sitekey,
             theme: "dark",
             callback: (token: string) => {
-              setTurnstileToken(token);
+              if (isMounted) setTurnstileToken(token);
+            },
+            "error-callback": (err: any) => {
+              console.warn("Cloudflare Turnstile error on current hostname:", err);
+            },
+            "expired-callback": () => {
+              if (isMounted) setTurnstileToken(null);
             },
           });
-        } catch {
-          // Handled
+          widgetIdRef.current = id;
+        } catch (err) {
+          console.error("Turnstile render error:", err);
         }
       }
     };
 
     if (typeof window !== "undefined" && (window as any).turnstile) {
-      initTurnstile();
+      renderTurnstile();
     } else {
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         if (typeof window !== "undefined" && (window as any).turnstile) {
-          initTurnstile();
-          clearInterval(timer);
+          renderTurnstile();
+          if (timer) clearInterval(timer);
         }
-      }, 500);
-      return () => clearInterval(timer);
+      }, 250);
     }
+
+    return () => {
+      isMounted = false;
+      if (timer) clearInterval(timer);
+    };
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
