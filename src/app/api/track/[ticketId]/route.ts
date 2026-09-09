@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { serverDb } from "@/lib/firebase-server";
+import { dbRepo } from "@/db/repo";
 
 export async function GET(
   req: NextRequest,
@@ -13,50 +13,22 @@ export async function GET(
       return NextResponse.json({ error: "Nomor tiket tidak valid." }, { status: 400 });
     }
 
-    if (!serverDb) {
+    const report = await dbRepo.getReportByTicketId(cleanTicketId);
+
+    if (!report) {
       return NextResponse.json(
-        { error: "Koneksi basis data belum siap. Silakan hubungi admin." },
-        { status: 503 }
+        { error: "Laporan dengan nomor tiket tersebut tidak ditemukan." },
+        { status: 404 }
       );
     }
 
-    const docRef = serverDb.collection("reports").doc(cleanTicketId);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) {
-      // Query by ticketId field fallback
-      const querySnap = await serverDb
-        .collection("reports")
-        .where("ticketId", "==", cleanTicketId)
-        .limit(1)
-        .get();
-
-      if (querySnap.empty) {
-        return NextResponse.json(
-          { error: "Laporan dengan nomor tiket tersebut tidak ditemukan." },
-          { status: 404 }
-        );
-      }
-
-      const data = querySnap.docs[0].data();
-      return NextResponse.json({
-        ticketId: data.ticketId,
-        websiteUrl: data.websiteUrl,
-        category: data.category || "Judi Online",
-        status: data.status || "BARU",
-        createdAt: data.createdAt,
-        statusHistory: data.statusHistory || [],
-      });
-    }
-
-    const data = docSnap.data()!;
     return NextResponse.json({
-      ticketId: data.ticketId,
-      websiteUrl: data.websiteUrl,
-      category: data.category || "Judi Online",
-      status: data.status || "BARU",
-      createdAt: data.createdAt,
-      statusHistory: data.statusHistory || [],
+      ticketId: report.ticketId,
+      websiteUrl: report.websiteUrl,
+      category: report.category || "Judi Online",
+      status: report.status || "BARU",
+      createdAt: report.createdAt,
+      statusHistory: report.statusHistory || [],
     });
   } catch (error: any) {
     console.error("Track Error:", error);

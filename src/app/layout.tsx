@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Toaster } from "sonner";
 import Script from "next/script";
 import "./globals.css";
 
@@ -26,6 +27,7 @@ export default function RootLayout({
         <link rel="icon" href="/assets/img/logo.png" />
       </head>
       <body className="min-h-screen flex flex-col bg-[#070b12] text-slate-100 antialiased selection:bg-cyan-500/20 selection:text-cyan-300">
+        <Toaster position="top-right" theme="dark" richColors />
         {children}
         <Script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"

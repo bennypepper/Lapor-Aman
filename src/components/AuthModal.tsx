@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { X, Lock, Mail, User, Phone, MapPin, AlertCircle, Loader2 } from "lucide-react";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase-client";
+import { toast } from "sonner";
 import { isValidNIK, isValidPhone } from "@/lib/utils";
 
 interface AuthModalProps {
@@ -39,30 +35,51 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           throw new Error("Semua data profil wajib dilengkapi.");
         }
         if (!isValidNIK(nik)) {
-          throw new Error("NIK harus terdiri dari 16 digit angka.");
+          throw new Error("NIK harus tepat 16 digit angka.");
         }
         if (!isValidPhone(phone)) {
           throw new Error("Nomor ponsel tidak valid.");
         }
 
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        onSuccess(cred.user);
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password,
+            fullname,
+            nik,
+            phone,
+            address,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Pendaftaran gagal.");
+        }
+
+        toast.success("Akun pelapor berhasil dibuat!");
+        onSuccess(data.user);
         onClose();
       } else {
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        onSuccess(cred.user);
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Gagal masuk.");
+        }
+
+        toast.success(`Selamat datang kembali, ${data.user.name || data.user.email}!`);
+        onSuccess(data.user);
         onClose();
       }
     } catch (err: any) {
-      let msg = err.message || "Gagal melakukan otentikasi.";
-      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
-        msg = "Email atau kata sandi tidak cocok.";
-      } else if (err.code === "auth/email-already-in-use") {
-        msg = "Email sudah terdaftar. Silakan masuk.";
-      } else if (err.code === "auth/weak-password") {
-        msg = "Kata sandi minimal 6 karakter.";
-      }
-      setError(msg);
+      setError(err.message || "Gagal melakukan otentikasi.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +100,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         </h2>
         <p className="mt-1 text-xs text-slate-400">
           {isRegister
-            ? "Lengkapi profil untuk pelaporan terverifikasi."
+            ? "Lengkapi profil untuk pelaporan terverifikasi dan perlindungan PII server-side."
             : "Masuk untuk memantau seluruh riwayat aduan Anda."}
         </p>
 

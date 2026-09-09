@@ -69,6 +69,11 @@ node_modules/
 # Next.js
 .next/
 out/
+*.tsbuildinfo
+
+# Local dev persistent store
+data/
+*.db
 
 # dataconnect generated files
 .dataconnect

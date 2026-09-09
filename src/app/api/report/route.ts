@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateTicketId } from "@/lib/utils";
 import { encryptServerData } from "@/lib/crypto";
-import { serverDb } from "@/lib/firebase-server";
 import { serverConfig } from "@/lib/config";
+import { dbRepo } from "@/db/repo";
+import { getSessionFromRequest } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,15 +15,14 @@ export async function POST(req: NextRequest) {
       evidenceUrl = null,
       isAnonymous = false,
       turnstileToken = null,
-      reporterUid = "anonymous",
-      reporterEmail = "",
       reporterName = "Anonim",
+      reporterEmail = "",
       reporterPhone = "",
       reporterNik = "",
       reporterAddress = "",
     } = body;
 
-    // Verify Turnstile CAPTCHA if secret key is present
+    // Check Turnstile CAPTCHA if secret key is configured
     if (serverConfig.turnstileSecretKey) {
       if (!turnstileToken) {
         return NextResponse.json(
@@ -55,50 +55,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if citizen is logged in via session cookie
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id || null;
+    const finalEmail = isAnonymous ? "" : (session?.email || reporterEmail || "");
+    const finalName = isAnonymous ? "Anonim" : (session?.name || reporterName || "Anonim");
+
     const ticketId = generateTicketId();
-    const now = new Date();
+    const reportId = `rep_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     // Encrypt confidential reporter PII using server-side AES-256
-    const encryptedPhone = reporterPhone ? encryptServerData(reporterPhone) : "";
-    const encryptedNik = reporterNik ? encryptServerData(reporterNik) : "";
-    const encryptedAddress = reporterAddress ? encryptServerData(reporterAddress) : "";
+    const encryptedPhone = reporterPhone ? encryptServerData(reporterPhone.trim()) : "";
+    const encryptedNik = reporterNik ? encryptServerData(reporterNik.trim()) : "";
+    const encryptedAddress = reporterAddress ? encryptServerData(reporterAddress.trim()) : "";
 
-    const reportDocument = {
+    const report = await dbRepo.createReport({
+      id: reportId,
       ticketId,
+      userId: userId || undefined,
       websiteUrl: websiteUrl.trim(),
       category,
       details: details.trim(),
-      evidenceUrl,
+      evidenceUrl: evidenceUrl || undefined,
       isAnonymous: Boolean(isAnonymous),
-      reporterUid,
-      reporterEmail: isAnonymous ? "" : reporterEmail,
-      reporterName: isAnonymous ? "Anonim" : reporterName,
+      reporterName: finalName,
+      reporterEmail: finalEmail,
       encryptedPhone,
       encryptedNik,
       encryptedAddress,
       status: "BARU",
-      createdAt: now.toISOString(),
-      statusHistory: [
-        {
-          status: "BARU",
-          timestamp: now.toISOString(),
-          note: "Laporan berhasil diterima sistem dan mengantre untuk verifikasi.",
-        },
-      ],
-    };
-
-    if (serverDb) {
-      await serverDb.collection("reports").doc(ticketId).set(reportDocument);
-    } else {
-      console.warn("Firestore serverDb unavailable, report logged to stdout in preview mode:", ticketId);
-    }
+      initialNote: "Laporan berhasil diterima sistem dan mengantre untuk verifikasi.",
+    });
 
     return NextResponse.json({
       success: true,
-      ticketId,
-      websiteUrl: reportDocument.websiteUrl,
-      status: "BARU",
-      createdAt: reportDocument.createdAt,
+      ticketId: report.ticketId,
+      websiteUrl: report.websiteUrl,
+      status: report.status,
+      createdAt: report.createdAt,
     });
   } catch (error: any) {
     console.error("Report Submission Error:", error);

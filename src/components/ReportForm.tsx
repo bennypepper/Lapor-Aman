@@ -1,8 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, FileCheck, Download, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
+import {
+  Send,
+  Upload,
+  FileCheck,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  ShieldCheck,
+  Copy,
+  Check,
+  UserCheck,
+} from "lucide-react";
 import jsPDF from "jspdf";
+import { toast } from "sonner";
 import { clientConfig } from "@/lib/config";
 
 interface ReportFormProps {
@@ -10,15 +22,16 @@ interface ReportFormProps {
   onSuccess?: (ticketId: string) => void;
 }
 
-export default function ReportForm({ user }: ReportFormProps) {
+export default function ReportForm({ user, onSuccess }: ReportFormProps) {
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [category, setCategory] = useState("Situs Taruhan / Casino");
+  const [category, setCategory] = useState("Situs Taruhan / Casino Online");
   const [details, setDetails] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [successData, setSuccessData] = useState<{
     ticketId: string;
     websiteUrl: string;
@@ -58,7 +71,6 @@ export default function ReportForm({ user }: ReportFormProps) {
     }
   }, []);
 
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
@@ -69,6 +81,13 @@ export default function ReportForm({ user }: ReportFormProps) {
       setFile(selected);
       setError(null);
     }
+  };
+
+  const handleCopyTicket = (ticketId: string) => {
+    navigator.clipboard.writeText(ticketId);
+    setCopied(true);
+    toast.success("Nomor tiket berhasil disalin ke clipboard!");
+    setTimeout(() => setCopied(false), 2500);
   };
 
   const handleDownloadPdf = (ticketId: string, siteUrl: string, desc: string) => {
@@ -124,7 +143,7 @@ export default function ReportForm({ user }: ReportFormProps) {
     addRow("Waktu Masuk:", new Date().toLocaleString("id-ID"));
     addRow("Kategori:", category);
     addRow("Situs Dilaporkan:", siteUrl);
-    addRow("Identitas:", isAnonymous ? "Anonim (Dilindungi)" : user?.email || "Terdaftar");
+    addRow("Identitas:", isAnonymous ? "Anonim (Dilindungi)" : user?.email || "Warga Terverifikasi");
 
     y += 5;
     doc.setFont("helvetica", "bold");
@@ -140,7 +159,7 @@ export default function ReportForm({ user }: ReportFormProps) {
     doc.line(16, footerY - 5, pageWidth - 16, footerY - 5);
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text("Bukti tanda terima ini sah secara elektronik sesuai UU ITE.", 20, footerY);
+    doc.text("Bukti tanda terima ini sah secara elektronik sesuai regulasi digital.", 20, footerY);
     doc.text(`Dicetak: ${new Date().toISOString()}`, pageWidth - 20, footerY, { align: "right" });
 
     doc.save(`Tanda_Terima_${ticketId}.pdf`);
@@ -157,7 +176,6 @@ export default function ReportForm({ user }: ReportFormProps) {
     setError(null);
 
     try {
-      // Direct call to our secure serverless endpoint
       const response = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,9 +185,8 @@ export default function ReportForm({ user }: ReportFormProps) {
           details,
           isAnonymous,
           turnstileToken,
-          reporterUid: user?.uid || "anonymous",
           reporterEmail: user?.email || "",
-          reporterName: isAnonymous ? "Anonim" : user?.displayName || user?.email?.split("@")[0] || "Pelapor",
+          reporterName: isAnonymous ? "Anonim" : user?.name || user?.email?.split("@")[0] || "Pelapor",
         }),
       });
 
@@ -184,6 +201,9 @@ export default function ReportForm({ user }: ReportFormProps) {
         websiteUrl: data.websiteUrl,
         createdAt: data.createdAt,
       });
+
+      toast.success("Laporan berhasil dikirim!");
+      if (onSuccess) onSuccess(data.ticketId);
 
       // Clear form inputs
       setWebsiteUrl("");
@@ -205,20 +225,41 @@ export default function ReportForm({ user }: ReportFormProps) {
           Formulir Pengaduan Situs Judi Online
         </h2>
         <p className="mt-1 text-xs text-slate-400">
-          Laporkan link situs perjudian, iklan sponsor ilegal, atau rekening bandar. Identitas Anda dienkripsi secara server-side (AES-256).
+          Laporkan tautan situs perjudian, iklan sponsor ilegal, atau rekening bandar. Identitas Anda dienkripsi secara server-side (AES-256).
         </p>
       </div>
+
+      {user && !successData && (
+        <div className="mb-5 flex items-center gap-2 rounded-md border border-cyan-900/40 bg-cyan-950/20 p-3 text-xs text-cyan-300">
+          <UserCheck className="h-4 w-4 shrink-0 text-cyan-400" />
+          <span>
+            Masuk sebagai <strong>{user.name || user.email}</strong>. Laporan ini akan otomatis tercatat pada riwayat akun Anda.
+          </span>
+        </div>
+      )}
 
       {successData ? (
         <div className="rounded-md border border-emerald-900/60 bg-emerald-950/30 p-6 text-center">
           <CheckCircle className="mx-auto h-10 w-10 text-emerald-400 mb-3" />
           <h3 className="text-base font-semibold text-white">Laporan Berhasil Disimpan</h3>
           <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto">
-            Terima kasih atas partisipasi Anda. Laporan telah masuk ke antrean verifikasi dan segera diproses.
+            Terima kasih atas partisipasi Anda. Laporan telah masuk ke antrean verifikasi dan segera ditindaklanjuti.
           </p>
 
-          <div className="mt-4 inline-block rounded-md border border-slate-800 bg-slate-900 px-4 py-2 font-mono text-sm text-cyan-300 font-bold">
-            {successData.ticketId}
+          {/* Ticket ID Display with 1-Click Copy */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <div className="rounded-md border border-slate-800 bg-slate-900 px-4 py-2 font-mono text-sm text-cyan-300 font-bold">
+              {successData.ticketId}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleCopyTicket(successData.ticketId)}
+              className="flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700 hover:text-white transition"
+              title="Salin Nomor Tiket"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
+              <span>{copied ? "Tersalin!" : "Salin Tiket"}</span>
+            </button>
           </div>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">

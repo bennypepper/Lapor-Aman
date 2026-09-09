@@ -1,30 +1,117 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth } from "@/lib/firebase-client";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ReportForm from "@/components/ReportForm";
 import TrackingView from "@/components/TrackingView";
 import ChatDrawer from "@/components/ChatDrawer";
 import AuthModal from "@/components/AuthModal";
-import { Shield, Lock, EyeOff, CheckCircle2, ArrowRight } from "lucide-react";
+import {
+  Shield,
+  Lock,
+  EyeOff,
+  CheckCircle2,
+  ArrowRight,
+  History,
+  ExternalLink,
+  Clock,
+  Loader2,
+  Copy,
+  Check,
+} from "lucide-react";
+import { toast } from "sonner";
+import { formatDate } from "@/lib/utils";
+
+interface UserReport {
+  id: string;
+  ticketId: string;
+  websiteUrl: string;
+  category: string;
+  details: string;
+  status: string;
+  createdAt: string;
+}
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [userReports, setUserReports] = useState<UserReport[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [copiedTicket, setCopiedTicket] = useState<string | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
+  const fetchSession = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
+    } catch {
+      setUser(null);
+    }
   }, []);
 
+  const fetchUserReports = useCallback(async () => {
+    setLoadingReports(true);
+    try {
+      const res = await fetch("/api/user/reports");
+      if (res.ok) {
+        const data = await res.json();
+        setUserReports(data.reports || []);
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setLoadingReports(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserReports();
+    } else {
+      setUserReports([]);
+    }
+  }, [user, fetchUserReports]);
+
   const handleLogout = async () => {
-    await signOut(auth);
-    setUser(null);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setUser(null);
+      setUserReports([]);
+      toast.success("Anda berhasil keluar dari sesi.");
+    } catch {
+      toast.error("Gagal keluar dari sesi.");
+    }
+  };
+
+  const handleCopyTicket = (ticketId: string) => {
+    navigator.clipboard.writeText(ticketId);
+    setCopiedTicket(ticketId);
+    toast.success("Nomor tiket disalin!");
+    setTimeout(() => setCopiedTicket(null), 2000);
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "SELESAI":
+        return "bg-emerald-950/80 text-emerald-300 border-emerald-800";
+      case "DITOLAK":
+        return "bg-rose-950/80 text-rose-300 border-rose-800";
+      case "DITINDAKLANJUTI":
+        return "bg-purple-950/80 text-purple-300 border-purple-800";
+      case "DIVERIFIKASI":
+        return "bg-amber-950/80 text-amber-300 border-amber-800";
+      default:
+        return "bg-cyan-950/80 text-cyan-300 border-cyan-800";
+    }
   };
 
   return (
@@ -67,6 +154,15 @@ export default function Home() {
               >
                 Lacak Status Aduan
               </a>
+              {user && (
+                <a
+                  href="#riwayat"
+                  className="flex items-center gap-2 rounded-md border border-cyan-700/60 bg-cyan-950/40 px-5 py-2.5 text-xs font-medium text-cyan-300 transition hover:bg-cyan-900/50"
+                >
+                  <History className="h-3.5 w-3.5" />
+                  Riwayat Laporan Saya ({userReports.length})
+                </a>
+              )}
             </div>
 
             {/* Trust Badges */}
@@ -107,8 +203,118 @@ export default function Home() {
         {/* Content Section: Form & Tracking */}
         <section className="py-12 sm:py-16">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 space-y-12">
-            <ReportForm user={user} />
+            <ReportForm
+              user={user}
+              onSuccess={() => {
+                if (user) fetchUserReports();
+              }}
+            />
+
             <TrackingView />
+
+            {/* Logged-In User Reports History */}
+            {user && (
+              <div id="riwayat" className="rounded-lg border border-slate-800 bg-[#0c121e] p-6 sm:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
+                      <History className="h-4 w-4 text-cyan-400" />
+                      Riwayat Laporan Aduan Saya
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Daftar seluruh laporan yang Anda kirimkan menggunakan akun terverifikasi.
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchUserReports}
+                    disabled={loadingReports}
+                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 hover:text-white transition"
+                  >
+                    {loadingReports ? "Memperbarui..." : "Segarkan Data"}
+                  </button>
+                </div>
+
+                {loadingReports ? (
+                  <div className="flex items-center justify-center py-10 text-slate-400 gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                    <span className="text-xs">Memuat riwayat pengaduan Anda...</span>
+                  </div>
+                ) : userReports.length === 0 ? (
+                  <div className="rounded-md border border-slate-800 bg-slate-900/30 p-8 text-center text-xs text-slate-400">
+                    Anda belum mengirimkan laporan dengan akun ini. Buat aduan baru menggunakan formulir di atas.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-slate-800">
+                    <table className="w-full text-left text-xs">
+                      <thead className="border-b border-slate-800 bg-slate-900/70 font-mono text-[11px] text-slate-400 uppercase">
+                        <tr>
+                          <th className="px-4 py-3">Nomor Tiket</th>
+                          <th className="px-4 py-3">Tanggal</th>
+                          <th className="px-4 py-3">Target Situs</th>
+                          <th className="px-4 py-3">Kategori</th>
+                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 text-right">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/80">
+                        {userReports.map((r) => (
+                          <tr key={r.ticketId} className="hover:bg-slate-900/30 transition">
+                            <td className="px-4 py-3 font-mono font-medium text-cyan-400">
+                              <div className="flex items-center gap-1.5">
+                                <span>{r.ticketId}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyTicket(r.ticketId)}
+                                  className="text-slate-500 hover:text-cyan-300 transition"
+                                  title="Salin Nomor Tiket"
+                                >
+                                  {copiedTicket === r.ticketId ? (
+                                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-400">{formatDate(r.createdAt)}</td>
+                            <td className="px-4 py-3 font-mono text-slate-200 max-w-[200px] truncate" title={r.websiteUrl}>
+                              {r.websiteUrl}
+                            </td>
+                            <td className="px-4 py-3 text-slate-300">{r.category}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-block rounded-full border px-2.5 py-0.5 text-[10px] font-medium ${getStatusBadgeClass(
+                                  r.status
+                                )}`}
+                              >
+                                {r.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <a
+                                href="#tracking"
+                                onClick={() => {
+                                  // Auto fill tracking query
+                                  const trackInput = document.querySelector("#tracking input") as HTMLInputElement;
+                                  if (trackInput) {
+                                    trackInput.value = r.ticketId;
+                                    trackInput.dispatchEvent(new Event("input", { bubbles: true }));
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] text-cyan-300 hover:bg-slate-700 hover:text-white transition"
+                              >
+                                Lacak
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
       </main>

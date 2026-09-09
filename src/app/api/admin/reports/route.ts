@@ -1,37 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { serverDb } from "@/lib/firebase-server";
+import { dbRepo } from "@/db/repo";
 import { serverConfig } from "@/lib/config";
 import { decryptServerData } from "@/lib/crypto";
+import { getSessionFromRequest } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const adminEmail = req.headers.get("x-admin-email")?.toLowerCase().trim();
+    const session = await getSessionFromRequest(req);
+    const adminEmailHeader = req.headers.get("x-admin-email")?.toLowerCase().trim();
     const decryptPass = req.headers.get("x-decrypt-key") || "";
 
-    if (!adminEmail || !serverConfig.adminEmails.includes(adminEmail)) {
-      return NextResponse.json({ error: "Akses ditolak. Anda bukan administrator." }, { status: 403 });
+    const isAdminSession = session?.role === "ADMIN";
+    const isAdminHeader = adminEmailHeader && serverConfig.adminEmails.includes(adminEmailHeader);
+
+    if (!isAdminSession && !isAdminHeader) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Anda bukan administrator." },
+        { status: 403 }
+      );
     }
 
-    if (!serverDb) {
-      return NextResponse.json({ reports: [] });
-    }
+    const allReports = await dbRepo.getAllReports();
 
-    const snapshot = await serverDb.collection("reports").orderBy("createdAt", "desc").limit(100).get();
-
-    const reports = snapshot.docs.map((doc) => {
-      const d = doc.data();
+    const reports = allReports.map((d) => {
       let decryptedPhone = "";
       let decryptedNik = "";
       let decryptedAddress = "";
 
       if (decryptPass && decryptPass === serverConfig.serverEncryptionKey) {
-        decryptedPhone = decryptServerData(d.encryptedPhone);
-        decryptedNik = decryptServerData(d.encryptedNik);
-        decryptedAddress = decryptServerData(d.encryptedAddress);
+        decryptedPhone = decryptServerData(d.encryptedPhone || "");
+        decryptedNik = decryptServerData(d.encryptedNik || "");
+        decryptedAddress = decryptServerData(d.encryptedAddress || "");
       }
 
       return {
-        id: doc.id,
+        id: d.id,
         ticketId: d.ticketId,
         websiteUrl: d.websiteUrl,
         category: d.category,

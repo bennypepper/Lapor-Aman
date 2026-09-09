@@ -1,24 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, User } from "firebase/auth";
-import { auth } from "@/lib/firebase-client";
 import {
   ShieldAlert,
   ArrowLeft,
-  Key,
-  Download,
-  Filter,
-  CheckCircle2,
-  XCircle,
-  Clock,
   Lock,
   Unlock,
   Loader2,
   AlertCircle,
   FileSpreadsheet,
+  Filter,
 } from "lucide-react";
+import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 
 interface ReportItem {
@@ -38,7 +32,7 @@ interface ReportItem {
 }
 
 export default function AdminPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -50,32 +44,7 @@ export default function AdminPage() {
   const [isDecrypted, setIsDecrypted] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (u) {
-        fetchReports(u.email || "");
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginLoading(true);
-    setLoginError(null);
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      setUser(cred.user);
-      fetchReports(cred.user.email || "");
-    } catch (err: any) {
-      setLoginError("Login gagal: " + (err.message || "Periksa email dan sandi."));
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const fetchReports = async (adminEmail: string, key?: string) => {
+  const fetchReports = useCallback(async (adminEmail: string, key?: string) => {
     setLoadingReports(true);
     try {
       const headers: Record<string, string> = {
@@ -87,13 +56,79 @@ export default function AdminPage() {
       const data = await res.json();
       if (res.ok) {
         setReports(data.reports || []);
-        if (key) setIsDecrypted(true);
+        if (key) {
+          setIsDecrypted(true);
+          toast.success("Data identitas pelapor berhasil didekripsi.");
+        }
+      } else {
+        toast.error(data.error || "Gagal memuat laporan.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Terjadi kesalahan jaringan.");
     } finally {
       setLoadingReports(false);
     }
+  }, []);
+
+  const checkAdminSession = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user?.role === "ADMIN") {
+          setUser(data.user);
+          fetchReports(data.user.email);
+        } else if (data.user) {
+          setUser(data.user); // Logged in but not admin
+        }
+      }
+    } catch {
+      // Not logged in
+    }
+  }, [fetchReports]);
+
+  useEffect(() => {
+    checkAdminSession();
+  }, [checkAdminSession]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Gagal masuk.");
+      }
+
+      if (data.user.role !== "ADMIN") {
+        setUser(data.user);
+        throw new Error("Akun Anda tidak memiliki hak akses administrator.");
+      }
+
+      setUser(data.user);
+      toast.success(`Masuk sebagai ${data.user.email}`);
+      fetchReports(data.user.email);
+    } catch (err: any) {
+      setLoginError(err.message || "Periksa email dan kata sandi.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUser(null);
+    setReports([]);
+    setIsDecrypted(false);
+    toast.success("Berhasil keluar dari sesi admin.");
   };
 
   const handleUpdateStatus = async (ticketId: string, newStatus: string) => {
@@ -112,21 +147,43 @@ export default function AdminPage() {
         setReports((prev) =>
           prev.map((r) => (r.ticketId === ticketId ? { ...r, status: newStatus } : r))
         );
+        toast.success(`Status ${ticketId} diubah ke ${newStatus}`);
+      } else {
+        const d = await res.json();
+        toast.error(d.error || "Gagal memperbarui status.");
       }
     } catch (err) {
       console.error("Gagal update status:", err);
+      toast.error("Gagal memperbarui status.");
     }
   };
 
   const handleExportCsv = () => {
-    if (!reports.length) return;
-    const headers = ["Nomor Tiket", "Tanggal", "Situs", "Kategori", "Pelapor", "Status", "Detail"];
+    if (!reports.length) {
+      toast.error("Tidak ada data laporan untuk diekspor.");
+      return;
+    }
+    const headers = [
+      "Nomor Tiket",
+      "Tanggal",
+      "Situs",
+      "Kategori",
+      "Pelapor",
+      "NIK",
+      "Telepon",
+      "Alamat",
+      "Status",
+      "Detail Kronologi",
+    ];
     const rows = reports.map((r) => [
       r.ticketId,
       r.createdAt,
       `"${r.websiteUrl}"`,
       `"${r.category}"`,
       r.isAnonymous ? "Anonim" : `"${r.reporterName} (${r.reporterEmail})"`,
+      r.decryptedNik ? `"${r.decryptedNik}"` : '""',
+      r.decryptedPhone ? `"${r.decryptedPhone}"` : '""',
+      r.decryptedAddress ? `"${r.decryptedAddress.replace(/"/g, '""')}"` : '""',
       r.status,
       `"${(r.details || "").replace(/"/g, '""')}"`,
     ]);
@@ -136,16 +193,17 @@ export default function AdminPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `laporan_laporaman_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `lapor_aman_audit_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success("File CSV berhasil diunduh.");
   };
 
   const filteredReports =
     selectedStatus === "ALL" ? reports : reports.filter((r) => r.status === selectedStatus);
 
-  if (!user) {
+  if (!user || user.role !== "ADMIN") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070b12] p-4">
         <div className="w-full max-w-sm rounded-lg border border-slate-800 bg-[#0c121e] p-6 shadow-2xl">
@@ -155,8 +213,22 @@ export default function AdminPage() {
           </div>
 
           <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            Halaman terbatas untuk verifikator & staf penegakan hukum. Silakan masuk menggunakan akun resmi.
+            Halaman khusus staf verifikasi dan penegakan hukum siber. Masuk menggunakan akun administrator resmi.
           </p>
+
+          {user && user.role !== "ADMIN" && (
+            <div className="mb-4 rounded-md border border-amber-900/60 bg-amber-950/30 p-3 text-xs text-amber-300">
+              <p>
+                Anda masuk sebagai <strong>{user.email}</strong>, namun akun ini bukan administrator.
+              </p>
+              <button
+                onClick={handleLogout}
+                className="mt-2 text-xs font-semibold text-amber-400 hover:underline"
+              >
+                Keluar dan ganti akun
+              </button>
+            </div>
+          )}
 
           {loginError && (
             <div className="mb-4 flex items-center gap-2 rounded-md border border-rose-900/60 bg-rose-950/30 p-2.5 text-xs text-rose-300">
@@ -167,7 +239,7 @@ export default function AdminPage() {
 
           <form onSubmit={handleLogin} className="space-y-3">
             <div>
-              <label className="block text-[11px] font-medium text-slate-300 mb-1">Email Staf</label>
+              <label className="block text-[11px] font-medium text-slate-300 mb-1">Email Staf Admin</label>
               <input
                 type="email"
                 required
@@ -228,7 +300,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 hidden sm:inline">{user.email}</span>
             <button
-              onClick={() => signOut(auth)}
+              onClick={handleLogout}
               className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-300 hover:text-white transition"
             >
               Keluar
@@ -266,14 +338,14 @@ export default function AdminPage() {
                 value={decryptKey}
                 onChange={(e) => setDecryptKey(e.target.value)}
                 placeholder="Kunci Dekripsi AES..."
-                className="w-40 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:border-cyan-500"
+                className="w-44 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:border-cyan-500"
               />
               <button
                 onClick={() => fetchReports(user.email || "", decryptKey)}
                 className="flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700 transition"
               >
                 {isDecrypted ? <Unlock className="h-3.5 w-3.5 text-emerald-400" /> : <Lock className="h-3.5 w-3.5" />}
-                Dekripsi
+                Dekripsi PII
               </button>
             </div>
 
@@ -306,7 +378,7 @@ export default function AdminPage() {
                     <th className="px-4 py-3">Tiket</th>
                     <th className="px-4 py-3">Waktu</th>
                     <th className="px-4 py-3">Situs Tersangka</th>
-                    <th className="px-4 py-3">Pelapor</th>
+                    <th className="px-4 py-3">Pelapor & Kontak</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-right">Ubah Status</th>
                   </tr>
@@ -324,9 +396,18 @@ export default function AdminPage() {
                           <span className="text-slate-500 italic">Anonim</span>
                         ) : (
                           <div>
-                            <div>{r.reporterName}</div>
+                            <div className="font-medium text-slate-200">{r.reporterName}</div>
+                            {r.reporterEmail && <div className="text-[10px] text-slate-400">{r.reporterEmail}</div>}
                             {r.decryptedPhone && (
-                              <div className="font-mono text-[10px] text-emerald-400">{r.decryptedPhone}</div>
+                              <div className="font-mono text-[10px] text-emerald-400">Tel: {r.decryptedPhone}</div>
+                            )}
+                            {r.decryptedNik && (
+                              <div className="font-mono text-[10px] text-cyan-400">NIK: {r.decryptedNik}</div>
+                            )}
+                            {r.decryptedAddress && (
+                              <div className="text-[10px] text-slate-400 truncate max-w-[180px]">
+                                Alm: {r.decryptedAddress}
+                              </div>
                             )}
                           </div>
                         )}
