@@ -14,6 +14,8 @@ import {
   History,
 } from "lucide-react";
 
+import Image from "next/image";
+
 interface NavbarProps {
   user: any;
   onOpenAuth: () => void;
@@ -27,44 +29,53 @@ export default function Navbar({ user, onOpenAuth, onLogout }: NavbarProps) {
     <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#070b12]/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-cyan-500/30 bg-cyan-950/40 text-cyan-400 shadow-sm">
-            <Shield className="h-5 w-5 stroke-[1.75]" />
-          </div>
+        <Link href="/" className="flex items-center gap-3 group">
+          <Image
+            src="/assets/img/logo.png"
+            alt="Meridian Digital Logo"
+            width={40}
+            height={40}
+            className="h-10 w-auto object-contain transition group-hover:scale-105"
+          />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-semibold tracking-tight text-white">Lapor-Aman</span>
-              <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-mono font-medium text-cyan-400">
+              <span className="text-base font-bold tracking-tight text-white">
+                Lapor<span className="text-cyan-400">Aman</span>
+              </span>
+              <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono font-medium text-cyan-400">
                 v2.0
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Portal Pengaduan Aktivitas Judi Online</p>
+            <p className="text-[10px] text-slate-400">PT. Meridian Digital • Mitra Pemerintah</p>
           </div>
         </Link>
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-6 md:flex">
           <Link
-            href="#lapor"
-            className="flex items-center gap-1.5 text-xs font-medium text-slate-300 transition-colors hover:text-cyan-400"
+            href="#hero"
+            className="flex items-center gap-1 text-xs font-medium text-slate-300 transition-colors hover:text-cyan-400"
           >
-            <FileText className="h-3.5 w-3.5 text-slate-400" />
-            Kirim Laporan
+            Beranda
           </Link>
           <Link
             href="#tracking"
-            className="flex items-center gap-1.5 text-xs font-medium text-slate-300 transition-colors hover:text-cyan-400"
+            className="flex items-center gap-1 text-xs font-medium text-slate-300 transition-colors hover:text-cyan-400"
           >
-            <Search className="h-3.5 w-3.5 text-slate-400" />
             Lacak Tiket
+          </Link>
+          <Link
+            href="#faq"
+            className="flex items-center gap-1 text-xs font-medium text-slate-300 transition-colors hover:text-cyan-400"
+          >
+            FAQ
           </Link>
 
           {user && (
             <Link
               href="#riwayat"
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-300 transition-colors hover:text-cyan-400"
+              className="flex items-center gap-1 text-xs font-medium text-slate-300 transition-colors hover:text-cyan-400"
             >
-              <History className="h-3.5 w-3.5 text-slate-400" />
               Riwayat Saya
             </Link>
           )}
@@ -72,10 +83,10 @@ export default function Navbar({ user, onOpenAuth, onLogout }: NavbarProps) {
           {(user?.role === "ADMIN" || !user) && (
             <Link
               href="/admin"
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-400 transition-colors hover:text-white"
+              className="flex items-center gap-1.5 text-xs font-medium text-amber-400/90 transition-colors hover:text-amber-300"
             >
-              <ShieldAlert className="h-3.5 w-3.5 text-amber-400/80" />
-              Admin Portal
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Dashboard Admin
             </Link>
           )}
         </nav>
@@ -144,20 +155,25 @@ export default function Navbar({ user, onOpenAuth, onLogout }: NavbarProps) {
           )}
 
           <Link
-            href="#lapor"
+            href="#hero"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white"
           >
-            <FileText className="h-4 w-4 text-cyan-400" />
-            Kirim Laporan
+            Beranda
           </Link>
           <Link
             href="#tracking"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white"
           >
-            <Search className="h-4 w-4 text-cyan-400" />
             Lacak Tiket
+          </Link>
+          <Link
+            href="#faq"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white"
+          >
+            FAQ
           </Link>
 
           {user && (

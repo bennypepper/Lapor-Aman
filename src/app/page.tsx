@@ -7,6 +7,9 @@ import ReportForm from "@/components/ReportForm";
 import TrackingView from "@/components/TrackingView";
 import ChatDrawer from "@/components/ChatDrawer";
 import AuthModal from "@/components/AuthModal";
+import FAQSection from "@/components/FAQSection";
+import ScrollToTop from "@/components/ScrollToTop";
+import Image from "next/image";
 import {
   Shield,
   Lock,
@@ -124,7 +127,7 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="border-b border-slate-800/80 bg-gradient-to-b from-[#0c1322] to-[#070b12] py-14 sm:py-20">
+        <section id="hero" className="border-b border-slate-800/80 bg-gradient-to-b from-[#0c1322] to-[#070b12] py-14 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-950/40 px-3 py-1 text-xs font-medium text-cyan-300 mb-6">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -196,6 +199,66 @@ export default function Home() {
                   <p className="text-[11px] text-slate-400">Unduh bukti nomor tiket instan</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Trusted Partners Section */}
+        <section className="border-y border-slate-800/60 bg-slate-900/30 py-8">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="text-center md:text-left">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-slate-400">
+                Didukung penuh oleh instansi resmi:
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Sinergi PT. Meridian Digital bersama otoritas penegak hukum dan regulasi siber Republik Indonesia
+              </p>
+            </div>
+            <div className="flex items-center gap-8 sm:gap-12">
+              <a
+                href="https://www.komdigi.go.id/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 opacity-75 hover:opacity-100 transition-opacity"
+              >
+                <div className="h-10 w-12 relative flex items-center justify-center">
+                  <Image
+                    src="/assets/img/logo-komdigi.png"
+                    alt="Logo Komdigi"
+                    width={48}
+                    height={40}
+                    className="h-9 w-auto object-contain grayscale group-hover:grayscale-0 transition-all"
+                  />
+                </div>
+                <div className="text-left">
+                  <span className="block text-xs font-semibold text-slate-200 group-hover:text-cyan-400 transition-colors">
+                    Komdigi RI
+                  </span>
+                  <span className="block text-[10px] text-slate-500 font-mono">Kementerian Komunikasi & Digital</span>
+                </div>
+              </a>
+              <a
+                href="https://polri.go.id/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 opacity-75 hover:opacity-100 transition-opacity"
+              >
+                <div className="h-10 w-10 relative flex items-center justify-center">
+                  <Image
+                    src="/assets/img/logo-polri.png"
+                    alt="Logo POLRI"
+                    width={40}
+                    height={40}
+                    className="h-9 w-auto object-contain grayscale group-hover:grayscale-0 transition-all"
+                  />
+                </div>
+                <div className="text-left">
+                  <span className="block text-xs font-semibold text-slate-200 group-hover:text-cyan-400 transition-colors">
+                    POLRI Cyber
+                  </span>
+                  <span className="block text-[10px] text-slate-500 font-mono">Bareskrim Polri</span>
+                </div>
+              </a>
             </div>
           </div>
         </section>
@@ -317,8 +380,12 @@ export default function Home() {
             )}
           </div>
         </section>
+
+        {/* FAQ Section */}
+        <FAQSection />
       </main>
 
+      <ScrollToTop />
       <Footer />
       <ChatDrawer />
       <AuthModal

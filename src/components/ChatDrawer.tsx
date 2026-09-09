@@ -85,16 +85,72 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
     }
   };
 
+  const [showCallout, setShowCallout] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowCallout(true);
+    }, 1400);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <>
-      {/* Floating Toggle Button */}
-      <div className="fixed bottom-5 right-5 z-40">
+      {/* Floating Toggle Button & Callout Popup */}
+      <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end">
+        {/* First-load Callout Popup */}
+        {showCallout && !isOpen && (
+          <div className="relative mb-3 flex items-start gap-2.5 rounded-lg border border-cyan-500/40 bg-[#0a121e]/95 p-3.5 text-xs text-white shadow-2xl backdrop-blur-md max-w-[280px] animate-in fade-in slide-in-from-bottom-3 duration-300">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-400">
+              <Bot className="h-4 w-4 animate-pulse" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[11px] text-cyan-300">Asisten AI LaporAman</span>
+                <span className="rounded bg-cyan-950 px-1 py-0.2 text-[9px] font-mono text-cyan-400">Gemini</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-snug">
+                Butuh bantuan cara melapor atau mengecek status tiket aduan Anda? Tanyakan langsung di sini!
+              </p>
+              <div className="pt-1.5 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setIsOpen(true);
+                    setShowCallout(false);
+                  }}
+                  className="rounded bg-cyan-600 px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-cyan-500 transition shadow-sm"
+                >
+                  Buka Chat
+                </button>
+                <button
+                  onClick={() => setShowCallout(false)}
+                  className="text-[10px] text-slate-400 hover:text-slate-200"
+                >
+                  Nanti
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCallout(false)}
+              className="text-slate-500 hover:text-white transition -mr-1 -mt-1 p-0.5"
+              aria-label="Tutup notifikasi"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            {/* Arrow pointer towards the chat button */}
+            <div className="absolute -bottom-1.5 right-4 h-3 w-3 rotate-45 border-b border-r border-cyan-500/40 bg-[#0a121e]" />
+          </div>
+        )}
+
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (showCallout) setShowCallout(false);
+          }}
           className="flex h-12 w-12 items-center justify-center rounded-full border border-cyan-500/40 bg-cyan-600 text-white shadow-lg transition-all hover:scale-105 hover:bg-cyan-500 active:scale-95"
           aria-label="Buka Asisten LaporAman"
         >
-          {isOpen ? <X className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
+          {isOpen ? <X className="h-5 w-5" /> : <Bot className="h-5 w-5 text-white" />}
         </button>
       </div>
 
