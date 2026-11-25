@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2 } from "lucide-react";
+import { X, Send, Bot, User, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -27,11 +27,18 @@ Ada yang bisa saya bantu hari ini? Anda dapat menanyakan tentang:
 * Edukasi seputar bahaya judi online
 
 Silakan sampaikan pertanyaan atau laporan Anda.`,
-      time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+      time: "",
     },
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const now = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    setMessages((prev) =>
+      prev.map((m) => (m.id === "welcome" && !m.time ? { ...m, time: now } : m))
+    );
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +49,14 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
   const handleSend = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
     if (!text || loading) return;
+
+    const history = messages
+      .filter((m) => m.id !== "welcome" && !m.id.startsWith("bot-err-"))
+      .slice(-10)
+      .map((m) => ({
+        role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+        content: m.text.slice(0, 1000),
+      }));
 
     const time = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     const userMsg: Message = {
@@ -59,10 +74,23 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, history }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `bot-err-${Date.now()}`,
+            sender: "bot",
+            text: data.error || "Maaf, layanan asisten sedang mengalami gangguan.",
+            time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+        return;
+      }
+
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: "bot",

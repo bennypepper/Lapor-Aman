@@ -3,12 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Shield,
   ShieldAlert,
   User as UserIcon,
   LogOut,
-  Search,
-  FileText,
   Menu,
   X,
   History,
@@ -16,8 +13,14 @@ import {
 
 import Image from "next/image";
 
+interface NavbarUser {
+  email: string;
+  name?: string | null;
+  role?: string;
+}
+
 interface NavbarProps {
-  user: any;
+  user: NavbarUser | null;
   onOpenAuth: () => void;
   onLogout: () => void;
 }

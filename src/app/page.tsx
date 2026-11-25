@@ -1,30 +1,30 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ReportForm from "@/components/ReportForm";
 import TrackingView from "@/components/TrackingView";
-import ChatDrawer from "@/components/ChatDrawer";
 import AuthModal from "@/components/AuthModal";
 import FAQSection from "@/components/FAQSection";
 import ScrollToTop from "@/components/ScrollToTop";
 import Image from "next/image";
 import {
-  Shield,
   Lock,
   EyeOff,
   CheckCircle2,
   ArrowRight,
   History,
   ExternalLink,
-  Clock,
   Loader2,
   Copy,
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
+
+const ChatDrawer = dynamic(() => import("@/components/ChatDrawer"), { ssr: false });
 
 interface UserReport {
   id: string;
@@ -36,12 +36,20 @@ interface UserReport {
   createdAt: string;
 }
 
+interface SessionUser {
+  id?: string;
+  email: string;
+  name?: string | null;
+  role?: string;
+}
+
 export default function Home() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [userReports, setUserReports] = useState<UserReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
   const [copiedTicket, setCopiedTicket] = useState<string | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -64,9 +72,12 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         setUserReports(data.reports || []);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Gagal memuat riwayat laporan Anda.");
       }
     } catch {
-      // Ignored
+      toast.error("Gagal terhubung ke server untuk memuat riwayat laporan.");
     } finally {
       setLoadingReports(false);
     }
@@ -273,7 +284,7 @@ export default function Home() {
               }}
             />
 
-            <TrackingView />
+            <TrackingView selectedTicketId={selectedTicketId} />
 
             {/* Logged-In User Reports History */}
             {user && (
@@ -356,13 +367,12 @@ export default function Home() {
                             <td className="px-4 py-3 text-right">
                               <a
                                 href="#tracking"
-                                onClick={() => {
-                                  // Auto fill tracking query
-                                  const trackInput = document.querySelector("#tracking input") as HTMLInputElement;
-                                  if (trackInput) {
-                                    trackInput.value = r.ticketId;
-                                    trackInput.dispatchEvent(new Event("input", { bubbles: true }));
-                                  }
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setSelectedTicketId(r.ticketId);
+                                  document
+                                    .getElementById("tracking")
+                                    ?.scrollIntoView({ behavior: "smooth" });
                                 }}
                                 className="inline-flex items-center gap-1 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] text-cyan-300 hover:bg-slate-700 hover:text-white transition"
                               >
