@@ -7,12 +7,26 @@ export function cn(...inputs: ClassValue[]) {
 
 export function generateTicketId(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const randomValues = new Uint32Array(8);
+  globalThis.crypto.getRandomValues(randomValues);
+
   let random = "";
-  for (let i = 0; i < 6; i++) {
-    random += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < randomValues.length; i++) {
+    random += chars.charAt(randomValues[i] % chars.length);
   }
-  const date = new Date().toISOString().slice(2, 10).replace(/-/g, "");
-  return `LPR-${date}-${random}`;
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jakarta",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const yy = parts.find((p) => p.type === "year")?.value ?? "00";
+  const mm = parts.find((p) => p.type === "month")?.value ?? "01";
+  const dd = parts.find((p) => p.type === "day")?.value ?? "01";
+
+  return `LPR-${yy}${mm}${dd}-${random}`;
 }
 
 export function isValidNIK(nik: string): boolean {
@@ -26,8 +40,10 @@ export function isValidPhone(phone: string): boolean {
 
 export function formatDate(timestamp: number | string | Date): string {
   if (!timestamp) return "-";
-  const date = typeof timestamp === "number" ? new Date(timestamp) : new Date(timestamp);
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -44,4 +60,11 @@ export function sanitizeText(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+export function escapeCsvCell(value: unknown): string {
+  const raw = value === null || value === undefined ? "" : String(value);
+  const neutralized = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  const escaped = neutralized.replace(/"/g, '""');
+  return `"${escaped}"`;
 }

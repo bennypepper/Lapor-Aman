@@ -69,7 +69,7 @@ export default function FAQSection() {
                 <button
                   type="button"
                   onClick={() => toggle(idx)}
-                  className="w-full flex items-center justify-between p-4 sm:p-5 text-left text-xs sm:text-sm font-medium text-slate-200 focus:outline-none"
+                  className="w-full flex items-center justify-between p-4 sm:p-5 text-left text-xs sm:text-sm font-medium text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
                 >
                   <span className="pr-4">{faq.question}</span>
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-700 bg-slate-800/80 text-slate-400">

@@ -1,15 +1,29 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Lock, Mail, User, Phone, MapPin, AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { isValidNIK, isValidPhone } from "@/lib/utils";
-import { clientConfig } from "@/lib/config";
+import { clientConfig } from "@/lib/client-config";
+
+interface AuthUser {
+  id?: string;
+  email: string;
+  name?: string | null;
+  role?: string;
+}
+
+interface TurnstileApi {
+  render: (container: HTMLElement, options: Record<string, unknown>) => string;
+  remove: (id: string) => void;
+}
+
+type TurnstileWindow = Window & { turnstile?: TurnstileApi };
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (user: any) => void;
+  onSuccess: (user: AuthUser) => void;
 }
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
@@ -21,47 +35,75 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [turnstileActivated, setTurnstileActivated] = useState(false);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
-  // Activate Turnstile when user has filled email & password in register mode
-  const isRegisterFormFilled = email.trim().length >= 4 && password.length >= 6;
+  const handleClose = useCallback(() => {
+    setError(null);
+    setTurnstileError(null);
+    setTurnstileToken(null);
+    if (widgetIdRef.current && typeof window !== "undefined") {
+      const turnstile = (window as TurnstileWindow).turnstile;
+      if (turnstile) {
+        try {
+          turnstile.remove(widgetIdRef.current);
+        } catch {}
+      }
+      widgetIdRef.current = null;
+    }
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
-    if (isRegister && isRegisterFormFilled && !turnstileActivated) {
-      setTurnstileActivated(true);
-    }
-  }, [isRegister, isRegisterFormFilled, turnstileActivated]);
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, handleClose]);
+
+  // Activate Turnstile when user has filled email & password in register mode
+  const turnstileActivated = isRegister && email.trim().length >= 4 && password.length >= 8;
 
   // Mount Turnstile widget smoothly once activated
   useEffect(() => {
-    if (!isRegister || !turnstileActivated) return;
+    if (!isOpen || !isRegister || !turnstileActivated) return;
 
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setInterval> | null = null;
     let isMounted = true;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50;
 
     const renderTurnstile = () => {
       if (!isMounted) return;
-      const turnstile = (window as any).turnstile;
+      const turnstile = (window as TurnstileWindow).turnstile;
       const container = turnstileContainerRef.current;
 
       if (turnstile && container) {
         if (widgetIdRef.current || container.children.length > 0) return;
 
         try {
-          const sitekey = (clientConfig.turnstileSiteKey || "0x4AAAAAAB8Es5v_tBV9BFWn").trim();
+          const sitekey = clientConfig.turnstileSiteKey.trim();
           const id = turnstile.render(container, {
             sitekey,
             theme: "dark",
             callback: (token: string) => {
-              if (isMounted) setTurnstileToken(token);
+              if (isMounted) {
+                setTurnstileToken(token);
+                setTurnstileError(null);
+              }
             },
-            "error-callback": (err: any) => {
+            "error-callback": (err: unknown) => {
               console.warn("AuthModal Cloudflare Turnstile error:", err);
+              if (isMounted) {
+                setTurnstileToken(null);
+                setTurnstileError("Verifikasi keamanan Turnstile gagal dimuat.");
+              }
             },
             "expired-callback": () => {
               if (isMounted) setTurnstileToken(null);
@@ -70,17 +112,28 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           widgetIdRef.current = id;
         } catch (err) {
           console.error("AuthModal Turnstile render error:", err);
+          if (isMounted) {
+            setTurnstileError("Gagal merender widget verifikasi keamanan.");
+          }
         }
       }
     };
 
-    if (typeof window !== "undefined" && (window as any).turnstile) {
+    if (typeof window !== "undefined" && (window as TurnstileWindow).turnstile) {
       renderTurnstile();
     } else {
       timer = setInterval(() => {
-        if (typeof window !== "undefined" && (window as any).turnstile) {
+        attempts += 1;
+        if (typeof window !== "undefined" && (window as TurnstileWindow).turnstile) {
           renderTurnstile();
           if (timer) clearInterval(timer);
+        } else if (attempts >= MAX_ATTEMPTS) {
+          if (timer) clearInterval(timer);
+          if (isMounted) {
+            setTurnstileError(
+              "Widget verifikasi Cloudflare Turnstile gagal dimuat. Muat ulang halaman dan coba lagi."
+            );
+          }
         }
       }, 150);
     }
@@ -88,23 +141,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     return () => {
       isMounted = false;
       if (timer) clearInterval(timer);
+      if (widgetIdRef.current && typeof window !== "undefined") {
+        const turnstile = (window as TurnstileWindow).turnstile;
+        if (turnstile) {
+          try {
+            turnstile.remove(widgetIdRef.current);
+          } catch {}
+        }
+        widgetIdRef.current = null;
+      }
     };
-  }, [isRegister, turnstileActivated]);
+  }, [isOpen, isRegister, turnstileActivated]);
 
   if (!isOpen) return null;
-
-  const handleClose = () => {
-    setError(null);
-    setTurnstileActivated(false);
-    setTurnstileToken(null);
-    if (widgetIdRef.current && typeof window !== "undefined" && (window as any).turnstile) {
-      try {
-        (window as any).turnstile.remove(widgetIdRef.current);
-      } catch {}
-      widgetIdRef.current = null;
-    }
-    onClose();
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +162,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
     try {
       if (isRegister) {
+        if (password.length < 8 || password.length > 72) {
+          throw new Error("Kata sandi harus terdiri dari 8 hingga 72 karakter.");
+        }
         if (!fullname.trim() || !nik.trim() || !phone.trim() || !address.trim()) {
           throw new Error("Semua data profil wajib dilengkapi.");
         }
@@ -147,7 +199,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
         toast.success("Akun pelapor berhasil dibuat!");
         onSuccess(data.user);
-        onClose();
+        handleClose();
       } else {
         const res = await fetch("/api/auth/login", {
           method: "POST",
@@ -162,10 +214,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
         toast.success(`Selamat datang kembali, ${data.user.name || data.user.email}!`);
         onSuccess(data.user);
-        onClose();
+        handleClose();
       }
-    } catch (err: any) {
-      setError(err.message || "Gagal melakukan otentikasi.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal melakukan otentikasi.");
     } finally {
       setLoading(false);
     }
@@ -173,15 +225,22 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-lg border border-slate-800 bg-[#0c121e] p-6 shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        className="relative w-full max-w-md rounded-lg border border-slate-800 bg-[#0c121e] p-6 shadow-2xl"
+      >
         <button
+          type="button"
           onClick={handleClose}
+          aria-label="Tutup dialog"
           className="absolute right-4 top-4 text-slate-400 hover:text-white transition"
         >
           <X className="h-4 w-4" />
         </button>
 
-        <h2 className="text-base font-semibold text-white">
+        <h2 id="auth-modal-title" className="text-base font-semibold text-white">
           {isRegister ? "Pendaftaran Akun Pelapor" : "Masuk ke Akun Anda"}
         </h2>
         <p className="mt-1 text-xs text-slate-400">
@@ -220,9 +279,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
               <input
                 type="password"
                 required
+                minLength={isRegister ? 8 : undefined}
+                maxLength={72}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={isRegister ? "Minimal 8 karakter" : "••••••••"}
                 className="w-full rounded-md border border-slate-700 bg-slate-900/80 pl-9 pr-3 py-2 text-xs text-white focus:border-cyan-500"
               />
             </div>
@@ -318,11 +379,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                       ref={turnstileContainerRef}
                       className="min-h-[65px] w-full flex items-center justify-center"
                     />
-                    {!turnstileToken && (
-                      <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-                        Memproses tantangan keamanan Cloudflare...
+                    {turnstileError ? (
+                      <p className="text-[11px] text-rose-300 mt-1 flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                        <span>{turnstileError}</span>
                       </p>
+                    ) : (
+                      !turnstileToken && (
+                        <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+                          Memproses tantangan keamanan Cloudflare...
+                        </p>
+                      )
                     )}
                   </div>
                 )}
@@ -342,15 +410,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
         <div className="mt-4 text-center">
           <button
+            type="button"
             onClick={() => {
               setIsRegister(!isRegister);
               setError(null);
-              setTurnstileActivated(false);
+              setTurnstileError(null);
               setTurnstileToken(null);
-              if (widgetIdRef.current && typeof window !== "undefined" && (window as any).turnstile) {
-                try {
-                  (window as any).turnstile.remove(widgetIdRef.current);
-                } catch {}
+              if (widgetIdRef.current && typeof window !== "undefined") {
+                const turnstile = (window as TurnstileWindow).turnstile;
+                if (turnstile) {
+                  try {
+                    turnstile.remove(widgetIdRef.current);
+                  } catch {}
+                }
                 widgetIdRef.current = null;
               }
             }}

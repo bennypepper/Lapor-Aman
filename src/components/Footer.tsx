@@ -189,7 +189,7 @@ export default function Footer() {
               <div>
                 <h3 className="text-white font-semibold mb-1">1. Pendahuluan</h3>
                 <p className="text-slate-400">
-                  PT. Meridian Digital ("Kami") berkomitmen untuk melindungi privasi dan keamanan data pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, memproses, dan melindungi informasi yang Anda berikan saat menggunakan platform LaporAman.
+                  PT. Meridian Digital (&quot;Kami&quot;) berkomitmen untuk melindungi privasi dan keamanan data pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, memproses, dan melindungi informasi yang Anda berikan saat menggunakan platform LaporAman.
                 </p>
               </div>
               <div>

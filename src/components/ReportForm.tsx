@@ -13,13 +13,33 @@ import {
   Check,
   UserCheck,
 } from "lucide-react";
-import jsPDF from "jspdf";
 import { toast } from "sonner";
-import { clientConfig } from "@/lib/config";
+import { clientConfig } from "@/lib/client-config";
+
+interface ReportUser {
+  email?: string;
+  name?: string | null;
+}
+
+interface TurnstileApi {
+  render: (container: HTMLElement, options: Record<string, unknown>) => string;
+  remove: (id: string) => void;
+}
+
+type TurnstileWindow = Window & { turnstile?: TurnstileApi };
 
 interface ReportFormProps {
-  user: any;
+  user: ReportUser | null;
   onSuccess?: (ticketId: string) => void;
+}
+
+interface ReceiptData {
+  ticketId: string;
+  websiteUrl: string;
+  createdAt: string;
+  category: string;
+  details: string;
+  isAnonymous: boolean;
 }
 
 export default function ReportForm({ user, onSuccess }: ReportFormProps) {
@@ -28,56 +48,52 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
   const [details, setDetails] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [successData, setSuccessData] = useState<{
-    ticketId: string;
-    websiteUrl: string;
-    createdAt: string;
-  } | null>(null);
+  const [successData, setSuccessData] = useState<ReceiptData | null>(null);
 
-  const [turnstileActivated, setTurnstileActivated] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
   // Activate Turnstile only when user fills mandatory fields (URL & details)
-  const isFormFilled = websiteUrl.trim().length >= 3 && details.trim().length >= 5;
-
-  useEffect(() => {
-    if (isFormFilled && !turnstileActivated) {
-      setTurnstileActivated(true);
-    }
-  }, [isFormFilled, turnstileActivated]);
+  const turnstileActivated = websiteUrl.trim().length >= 3 && details.trim().length >= 5;
 
   // Mount Turnstile widget smoothly once activated
   useEffect(() => {
     if (!turnstileActivated) return;
 
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setInterval> | null = null;
     let isMounted = true;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50;
 
     const renderTurnstile = () => {
       if (!isMounted) return;
-      const turnstile = (window as any).turnstile;
+      const turnstile = (window as TurnstileWindow).turnstile;
       const container = turnstileContainerRef.current;
 
       if (turnstile && container) {
         if (widgetIdRef.current || container.children.length > 0) return;
 
         try {
-          const sitekey = (clientConfig.turnstileSiteKey || "0x4AAAAAAB8Es5v_tBV9BFWn").trim();
+          const sitekey = clientConfig.turnstileSiteKey.trim();
           const id = turnstile.render(container, {
             sitekey,
             theme: "dark",
             callback: (token: string) => {
-              if (isMounted) setTurnstileToken(token);
+              if (isMounted) {
+                setTurnstileToken(token);
+                setTurnstileError(null);
+              }
             },
-            "error-callback": (err: any) => {
+            "error-callback": (err: unknown) => {
               console.warn("Cloudflare Turnstile error on current hostname:", err);
+              if (isMounted) {
+                setTurnstileToken(null);
+                setTurnstileError("Verifikasi keamanan Turnstile gagal dimuat.");
+              }
             },
             "expired-callback": () => {
               if (isMounted) setTurnstileToken(null);
@@ -86,17 +102,28 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
           widgetIdRef.current = id;
         } catch (err) {
           console.error("Turnstile render error:", err);
+          if (isMounted) {
+            setTurnstileError("Gagal merender widget verifikasi keamanan.");
+          }
         }
       }
     };
 
-    if (typeof window !== "undefined" && (window as any).turnstile) {
+    if (typeof window !== "undefined" && (window as TurnstileWindow).turnstile) {
       renderTurnstile();
     } else {
       timer = setInterval(() => {
-        if (typeof window !== "undefined" && (window as any).turnstile) {
+        attempts += 1;
+        if (typeof window !== "undefined" && (window as TurnstileWindow).turnstile) {
           renderTurnstile();
           if (timer) clearInterval(timer);
+        } else if (attempts >= MAX_ATTEMPTS) {
+          if (timer) clearInterval(timer);
+          if (isMounted) {
+            setTurnstileError(
+              "Widget verifikasi Cloudflare Turnstile gagal dimuat. Muat ulang halaman dan coba lagi."
+            );
+          }
         }
       }, 150);
     }
@@ -104,20 +131,17 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
     return () => {
       isMounted = false;
       if (timer) clearInterval(timer);
+      if (widgetIdRef.current && typeof window !== "undefined") {
+        const turnstile = (window as TurnstileWindow).turnstile;
+        if (turnstile) {
+          try {
+            turnstile.remove(widgetIdRef.current);
+          } catch {}
+        }
+        widgetIdRef.current = null;
+      }
     };
   }, [turnstileActivated]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      if (selected.size > 5 * 1024 * 1024) {
-        setError("Ukuran bukti tangkapan layar maksimal 5MB.");
-        return;
-      }
-      setFile(selected);
-      setError(null);
-    }
-  };
 
   const handleCopyTicket = (ticketId: string) => {
     navigator.clipboard.writeText(ticketId);
@@ -126,7 +150,8 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleDownloadPdf = (ticketId: string, siteUrl: string, desc: string) => {
+  const handleDownloadPdf = async (receipt: ReceiptData) => {
+    const { jsPDF } = await import("jspdf");
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -161,7 +186,7 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
     doc.text("NOMOR TIKET LAPORAN:", 22, 61);
     doc.setFontSize(14);
     doc.setTextColor(14, 116, 144);
-    doc.text(ticketId, 22, 69);
+    doc.text(receipt.ticketId, 22, 69);
 
     // Metadata
     doc.setFontSize(10);
@@ -176,17 +201,24 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
       y += 10;
     };
 
-    addRow("Waktu Masuk:", new Date().toLocaleString("id-ID"));
-    addRow("Kategori:", category);
-    addRow("Situs Dilaporkan:", siteUrl);
-    addRow("Identitas:", isAnonymous ? "Anonim (Dilindungi)" : user?.email || "Warga Terverifikasi");
+    const receiptTime = receipt.createdAt
+      ? new Date(receipt.createdAt).toLocaleString("id-ID")
+      : new Date().toLocaleString("id-ID");
+
+    addRow("Waktu Masuk:", receiptTime);
+    addRow("Kategori:", receipt.category);
+    addRow("Situs Dilaporkan:", receipt.websiteUrl);
+    addRow(
+      "Identitas:",
+      receipt.isAnonymous ? "Anonim (Dilindungi)" : user?.email || "Warga Terverifikasi"
+    );
 
     y += 5;
     doc.setFont("helvetica", "bold");
     doc.text("Ringkasan Laporan:", 20, y);
     y += 7;
     doc.setFont("helvetica", "normal");
-    const splitDetails = doc.splitTextToSize(desc, pageWidth - 40);
+    const splitDetails = doc.splitTextToSize(receipt.details || "Laporan Judi Online", pageWidth - 40);
     doc.text(splitDetails, 20, y);
 
     // Footer
@@ -198,7 +230,7 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
     doc.text("Bukti tanda terima ini sah secara elektronik sesuai regulasi digital.", 20, footerY);
     doc.text(`Dicetak: ${new Date().toISOString()}`, pageWidth - 20, footerY, { align: "right" });
 
-    doc.save(`Tanda_Terima_${ticketId}.pdf`);
+    doc.save(`Tanda_Terima_${receipt.ticketId}.pdf`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -217,17 +249,24 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
     setError(null);
 
     try {
+      const submittedWebsiteUrl = websiteUrl.trim();
+      const submittedCategory = category;
+      const submittedDetails = details.trim();
+      const submittedIsAnonymous = isAnonymous;
+
       const response = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          websiteUrl,
-          category,
-          details,
-          isAnonymous,
+          websiteUrl: submittedWebsiteUrl,
+          category: submittedCategory,
+          details: submittedDetails,
+          isAnonymous: submittedIsAnonymous,
           turnstileToken,
           reporterEmail: user?.email || "",
-          reporterName: isAnonymous ? "Anonim" : user?.name || user?.email?.split("@")[0] || "Pelapor",
+          reporterName: submittedIsAnonymous
+            ? "Anonim"
+            : user?.name || user?.email?.split("@")[0] || "Pelapor",
         }),
       });
 
@@ -239,8 +278,11 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
 
       setSuccessData({
         ticketId: data.ticketId,
-        websiteUrl: data.websiteUrl,
+        websiteUrl: data.websiteUrl || submittedWebsiteUrl,
         createdAt: data.createdAt,
+        category: submittedCategory,
+        details: submittedDetails,
+        isAnonymous: submittedIsAnonymous,
       });
 
       toast.success("Laporan berhasil dikirim!");
@@ -249,18 +291,21 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
       // Clear form inputs and reset turnstile
       setWebsiteUrl("");
       setDetails("");
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setTurnstileActivated(false);
       setTurnstileToken(null);
-      if (widgetIdRef.current && typeof window !== "undefined" && (window as any).turnstile) {
-        try {
-          (window as any).turnstile.remove(widgetIdRef.current);
-        } catch {}
+      setTurnstileError(null);
+      if (widgetIdRef.current && typeof window !== "undefined") {
+        const turnstile = (window as TurnstileWindow).turnstile;
+        if (turnstile) {
+          try {
+            turnstile.remove(widgetIdRef.current);
+          } catch {}
+        }
         widgetIdRef.current = null;
       }
-    } catch (err: any) {
-      setError(err.message || "Terjadi kesalahan sistem saat mengirim laporan.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Terjadi kesalahan sistem saat mengirim laporan."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -313,7 +358,7 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
-              onClick={() => handleDownloadPdf(successData.ticketId, successData.websiteUrl, details || "Laporan Judi Online")}
+              onClick={() => void handleDownloadPdf(successData)}
               className="flex items-center gap-2 rounded-md bg-cyan-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-cyan-500"
             >
               <Download className="h-3.5 w-3.5" />
@@ -322,8 +367,8 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
             <button
               onClick={() => {
                 setSuccessData(null);
-                setTurnstileActivated(false);
                 setTurnstileToken(null);
+                setTurnstileError(null);
                 widgetIdRef.current = null;
               }}
               className="rounded-md border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition"
@@ -372,23 +417,25 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Bukti Tangkapan Layar (Opsional)</label>
-              <div className="flex items-center gap-2">
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Bukti Tangkapan Layar (Segera Hadir)
+              </label>
+              <div
+                aria-disabled="true"
+                className="flex items-center gap-2 rounded-md border border-dashed border-slate-800 bg-slate-900/30 px-3 py-2 text-[11px] text-slate-400 cursor-not-allowed opacity-75"
+              >
                 <input
-                  ref={fileInputRef}
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
-                  onChange={handleFileChange}
+                  disabled
+                  aria-disabled="true"
                   className="hidden"
                   id="file-upload"
                 />
-                <label
-                  htmlFor="file-upload"
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-slate-700 bg-slate-900/50 px-3 py-1.5 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200 transition"
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  <span className="truncate">{file ? file.name : "Pilih gambar (Max 5MB)"}</span>
-                </label>
+                <Upload className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                <span>
+                  Lampiran gambar sedang dalam pengembangan — sertakan tautan bukti di kolom kronologi jika perlu.
+                </span>
               </div>
             </div>
           </div>
@@ -449,11 +496,18 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
                   ref={turnstileContainerRef}
                   className="min-h-[65px] w-full flex items-center justify-center"
                 />
-                {!turnstileToken && (
-                  <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-                    Memproses tantangan keamanan Cloudflare...
+                {turnstileError ? (
+                  <p className="text-[11px] text-rose-300 mt-1 flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                    <span>{turnstileError}</span>
                   </p>
+                ) : (
+                  !turnstileToken && (
+                    <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+                      Memproses tantangan keamanan Cloudflare...
+                    </p>
+                  )
                 )}
               </div>
             )}

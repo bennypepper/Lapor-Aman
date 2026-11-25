@@ -1,7 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { serverConfig } from "./config";
+import { serverConfig } from "./server-config";
+import { dbRepo } from "@/db/repo";
+import { NO_STORE_HEADERS } from "./http";
 
 export interface SessionUser {
   id: string;
@@ -12,9 +14,17 @@ export interface SessionUser {
 
 export const SESSION_COOKIE_NAME = "lapor_aman_session";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || serverConfig.serverEncryptionKey || "lapor-aman-jwt-secret-key-32-chars-minimum"
-);
+function getJwtSecretBytes(): Uint8Array {
+  return new TextEncoder().encode(serverConfig.jwtSecret);
+}
+
+export function resolveEffectiveRole(email: string, dbRole?: string | null): "USER" | "ADMIN" {
+  const normalizedEmail = email.toLowerCase().trim();
+  if (dbRole === "ADMIN" || serverConfig.adminEmails.includes(normalizedEmail)) {
+    return "ADMIN";
+  }
+  return "USER";
+}
 
 export async function signSessionToken(user: SessionUser): Promise<string> {
   return await new SignJWT({
@@ -26,18 +36,27 @@ export async function signSessionToken(user: SessionUser): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getJwtSecretBytes());
 }
 
 export async function verifySessionToken(token: string): Promise<SessionUser | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecretBytes(), {
+      algorithms: ["HS256"],
+    });
+    if (
+      typeof payload.id !== "string" ||
+      typeof payload.email !== "string" ||
+      typeof payload.name !== "string"
+    ) {
+      return null;
+    }
     return {
-      id: payload.id as string,
-      email: payload.email as string,
-      name: payload.name as string,
-      role: (payload.role as "USER" | "ADMIN") || "USER",
+      id: payload.id,
+      email: payload.email,
+      name: payload.name,
+      role: payload.role === "ADMIN" ? "ADMIN" : "USER",
     };
   } catch {
     return null;
@@ -59,6 +78,49 @@ export async function getServerSession(): Promise<SessionUser | null> {
   } catch {
     return null;
   }
+}
+
+export async function requireAdminSession(
+  req: NextRequest
+): Promise<{ user: SessionUser; error?: never } | { user?: never; error: NextResponse }> {
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return {
+      error: NextResponse.json(
+        { error: "Sesi tidak valid. Silakan masuk sebagai administrator." },
+        { status: 401, headers: NO_STORE_HEADERS }
+      ),
+    };
+  }
+
+  const dbUser = await dbRepo.getUserById(session.id);
+  if (!dbUser) {
+    return {
+      error: NextResponse.json(
+        { error: "Sesi tidak valid. Akun tidak ditemukan." },
+        { status: 401, headers: NO_STORE_HEADERS }
+      ),
+    };
+  }
+
+  const effectiveRole = resolveEffectiveRole(dbUser.email, dbUser.role);
+  if (effectiveRole !== "ADMIN") {
+    return {
+      error: NextResponse.json(
+        { error: "Akses ditolak. Anda bukan administrator." },
+        { status: 403, headers: NO_STORE_HEADERS }
+      ),
+    };
+  }
+
+  return {
+    user: {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      role: "ADMIN",
+    },
+  };
 }
 
 export function attachSessionCookie(response: NextResponse, token: string) {

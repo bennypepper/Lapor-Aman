@@ -1,13 +1,55 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { generateTicketId } from "@/lib/utils";
+import { generateTicketId, isValidNIK, isValidPhone } from "@/lib/utils";
 import { encryptServerData } from "@/lib/crypto";
-import { serverConfig } from "@/lib/config";
 import { dbRepo } from "@/db/repo";
 import { getSessionFromRequest } from "@/lib/auth";
+import { checkRateLimitDistributed, getClientIp } from "@/lib/rate-limiter";
+import { verifyTurnstileToken } from "@/lib/turnstile";
+import {
+  isValidHttpUrl,
+  NO_STORE_HEADERS,
+  parseJsonBody,
+  verifySameOrigin,
+} from "@/lib/http";
+
+function isUniqueCollision(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as { code?: string; cause?: { code?: string } };
+  return err.code === "23505" || err.cause?.code === "23505";
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const originError = verifySameOrigin(req);
+    if (originError) return originError;
+
+    const ip = getClientIp(req);
+    const rate = await checkRateLimitDistributed(`report:${ip}`, 10, 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: `Terlalu banyak pengiriman laporan. Coba lagi dalam ${rate.resetSeconds} detik.` },
+        {
+          status: 429,
+          headers: { ...NO_STORE_HEADERS, "Retry-After": String(rate.resetSeconds) },
+        }
+      );
+    }
+
+    const parsed = await parseJsonBody<{
+      websiteUrl?: unknown;
+      category?: unknown;
+      details?: unknown;
+      evidenceUrl?: unknown;
+      isAnonymous?: unknown;
+      turnstileToken?: unknown;
+      reporterName?: unknown;
+      reporterPhone?: unknown;
+      reporterNik?: unknown;
+      reporterAddress?: unknown;
+    }>(req);
+    if (!parsed.ok) return parsed.response;
+
     const {
       websiteUrl,
       category = "Situs Taruhan / Casino",
@@ -16,68 +58,98 @@ export async function POST(req: NextRequest) {
       isAnonymous = false,
       turnstileToken = null,
       reporterName = "Anonim",
-      reporterEmail = "",
       reporterPhone = "",
       reporterNik = "",
       reporterAddress = "",
-    } = body;
+    } = parsed.data;
 
-    // Check Turnstile CAPTCHA if secret key is configured
-    if (serverConfig.turnstileSecretKey) {
-      if (!turnstileToken) {
-        return NextResponse.json(
-          { error: "Verifikasi CAPTCHA wajib diselesaikan." },
-          { status: 400 }
-        );
-      }
-
-      const verifyFormData = new URLSearchParams();
-      verifyFormData.append("secret", serverConfig.turnstileSecretKey);
-      verifyFormData.append("response", turnstileToken);
-
-      const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-        method: "POST",
-        body: verifyFormData,
-      });
-      const verifyData = await verifyRes.json();
-      if (!verifyData.success) {
-        return NextResponse.json(
-          { error: "Validasi CAPTCHA gagal. Silakan coba kembali." },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (!websiteUrl || !details) {
+    const turnstile = await verifyTurnstileToken(turnstileToken, ip);
+    if (!turnstile.ok) {
       return NextResponse.json(
-        { error: "URL situs dan detail laporan wajib diisi." },
-        { status: 400 }
+        { error: turnstile.error },
+        { status: turnstile.status, headers: NO_STORE_HEADERS }
       );
     }
 
-    // Check if citizen is logged in via session cookie
+    if (!isValidHttpUrl(websiteUrl, 2048)) {
+      return NextResponse.json(
+        { error: "URL situs harus menggunakan protokol http:// atau https:// yang valid (maksimal 2048 karakter)." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    if (typeof category !== "string" || !category.trim() || category.trim().length > 100) {
+      return NextResponse.json(
+        { error: "Kategori laporan tidak valid (maksimal 100 karakter)." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    if (typeof details !== "string" || details.trim().length < 10 || details.trim().length > 5000) {
+      return NextResponse.json(
+        { error: "Detail laporan harus terdiri dari 10 hingga 5000 karakter." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    let cleanEvidenceUrl: string | undefined;
+    if (evidenceUrl !== null && evidenceUrl !== undefined && evidenceUrl !== "") {
+      if (!isValidHttpUrl(evidenceUrl, 2048)) {
+        return NextResponse.json(
+          { error: "URL bukti harus menggunakan protokol http:// atau https:// yang valid." },
+          { status: 400, headers: NO_STORE_HEADERS }
+        );
+      }
+      cleanEvidenceUrl = (evidenceUrl as string).trim();
+    }
+
+    const anonymousFlag = Boolean(isAnonymous);
+
+    const phoneStr = typeof reporterPhone === "string" ? reporterPhone.trim() : "";
+    const nikStr = typeof reporterNik === "string" ? reporterNik.trim() : "";
+    const addressStr = typeof reporterAddress === "string" ? reporterAddress.trim() : "";
+    const nameStr = typeof reporterName === "string" ? reporterName.trim() : "";
+
+    if (!anonymousFlag) {
+      if (nikStr && !isValidNIK(nikStr)) {
+        return NextResponse.json(
+          { error: "NIK harus terdiri dari tepat 16 digit angka." },
+          { status: 400, headers: NO_STORE_HEADERS }
+        );
+      }
+      if (phoneStr && !isValidPhone(phoneStr)) {
+        return NextResponse.json(
+          { error: "Nomor telepon/ponsel tidak valid." },
+          { status: 400, headers: NO_STORE_HEADERS }
+        );
+      }
+      if (nameStr.length > 255 || addressStr.length > 500) {
+        return NextResponse.json(
+          { error: "Nama atau alamat pelapor melebihi batas karakter." },
+          { status: 400, headers: NO_STORE_HEADERS }
+        );
+      }
+    }
+
+    // Bind identity strictly from verified session cookie (never trust client-supplied reporterEmail)
     const session = await getSessionFromRequest(req);
-    const userId = session?.id || null;
-    const finalEmail = isAnonymous ? "" : (session?.email || reporterEmail || "");
-    const finalName = isAnonymous ? "Anonim" : (session?.name || reporterName || "Anonim");
+    const userId = session?.id ?? undefined;
+    const finalEmail = anonymousFlag ? "" : session?.email ?? "";
+    const finalName = anonymousFlag ? "Anonim" : session?.name || nameStr || "Anonim";
 
-    const ticketId = generateTicketId();
-    const reportId = `rep_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const encryptedPhone = !anonymousFlag && phoneStr ? encryptServerData(phoneStr) : "";
+    const encryptedNik = !anonymousFlag && nikStr ? encryptServerData(nikStr) : "";
+    const encryptedAddress = !anonymousFlag && addressStr ? encryptServerData(addressStr) : "";
 
-    // Encrypt confidential reporter PII using server-side AES-256
-    const encryptedPhone = reporterPhone ? encryptServerData(reporterPhone.trim()) : "";
-    const encryptedNik = reporterNik ? encryptServerData(reporterNik.trim()) : "";
-    const encryptedAddress = reporterAddress ? encryptServerData(reporterAddress.trim()) : "";
-
-    const report = await dbRepo.createReport({
-      id: reportId,
-      ticketId,
-      userId: userId || undefined,
-      websiteUrl: websiteUrl.trim(),
-      category,
+    const createPayload = () => ({
+      id: `rep_${crypto.randomUUID()}`,
+      ticketId: generateTicketId(),
+      userId,
+      websiteUrl: (websiteUrl as string).trim(),
+      category: category.trim(),
       details: details.trim(),
-      evidenceUrl: evidenceUrl || undefined,
-      isAnonymous: Boolean(isAnonymous),
+      evidenceUrl: cleanEvidenceUrl,
+      isAnonymous: anonymousFlag,
       reporterName: finalName,
       reporterEmail: finalEmail,
       encryptedPhone,
@@ -87,18 +159,32 @@ export async function POST(req: NextRequest) {
       initialNote: "Laporan berhasil diterima sistem dan mengantre untuk verifikasi.",
     });
 
-    return NextResponse.json({
-      success: true,
-      ticketId: report.ticketId,
-      websiteUrl: report.websiteUrl,
-      status: report.status,
-      createdAt: report.createdAt,
-    });
-  } catch (error: any) {
+    let report;
+    try {
+      report = await dbRepo.createReport(createPayload());
+    } catch (err) {
+      if (isUniqueCollision(err)) {
+        report = await dbRepo.createReport(createPayload());
+      } else {
+        throw err;
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        ticketId: report.ticketId,
+        websiteUrl: report.websiteUrl,
+        status: report.status,
+        createdAt: report.createdAt,
+      },
+      { status: 200, headers: NO_STORE_HEADERS }
+    );
+  } catch (error) {
     console.error("Report Submission Error:", error);
     return NextResponse.json(
       { error: "Gagal menyimpan laporan. Silakan coba beberapa saat lagi." },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }

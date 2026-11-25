@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2 } from "lucide-react";
+import { X, Send, Bot, User, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -15,7 +15,7 @@ export default function ChatDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: "welcome",
       sender: "bot",
@@ -32,6 +32,7 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const msgCounterRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,9 +44,17 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
     const text = (textToSend || input).trim();
     if (!text || loading) return;
 
+    const history = messages
+      .filter((m) => m.id !== "welcome" && !m.id.startsWith("bot-err-"))
+      .slice(-10)
+      .map((m) => ({
+        role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+        content: m.text.slice(0, 1000),
+      }));
+
     const time = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     const userMsg: Message = {
-      id: `user-${Date.now()}`,
+      id: `user-${++msgCounterRef.current}`,
       sender: "user",
       text,
       time,
@@ -59,12 +68,25 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, history }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `bot-err-${++msgCounterRef.current}`,
+            sender: "bot",
+            text: data.error || "Maaf, layanan asisten sedang mengalami gangguan.",
+            time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+        return;
+      }
+
       const botMsg: Message = {
-        id: `bot-${Date.now()}`,
+        id: `bot-${++msgCounterRef.current}`,
         sender: "bot",
         text: data.reply || "Maaf, tidak dapat memproses jawaban saat ini.",
         time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
@@ -74,7 +96,7 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
       setMessages((prev) => [
         ...prev,
         {
-          id: `bot-err-${Date.now()}`,
+          id: `bot-err-${++msgCounterRef.current}`,
           sender: "bot",
           text: "Terjadi gangguan jaringan saat menghubungi asisten AI.",
           time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),

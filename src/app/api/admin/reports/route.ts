@@ -1,33 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbRepo } from "@/db/repo";
-import { serverConfig } from "@/lib/config";
-import { decryptServerData } from "@/lib/crypto";
-import { getSessionFromRequest } from "@/lib/auth";
+import { decryptServerData, verifyEncryptionKey } from "@/lib/crypto";
+import { requireAdminSession } from "@/lib/auth";
+import { NO_STORE_HEADERS } from "@/lib/http";
+
+function parseNonNegativeInt(raw: string | null, fallback: number): number {
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
-    const adminEmailHeader = req.headers.get("x-admin-email")?.toLowerCase().trim();
-    const decryptPass = req.headers.get("x-decrypt-key") || "";
+    const auth = await requireAdminSession(req);
+    if (auth.error) return auth.error;
 
-    const isAdminSession = session?.role === "ADMIN";
-    const isAdminHeader = adminEmailHeader && serverConfig.adminEmails.includes(adminEmailHeader);
+    const decryptPass = (req.headers.get("x-decrypt-key") || "").trim();
+    let decryptionValid = false;
 
-    if (!isAdminSession && !isAdminHeader) {
-      return NextResponse.json(
-        { error: "Akses ditolak. Anda bukan administrator." },
-        { status: 403 }
-      );
+    if (decryptPass.length > 0) {
+      if (!verifyEncryptionKey(decryptPass)) {
+        return NextResponse.json(
+          { error: "Kunci dekripsi tidak valid.", decryptionValid: false },
+          { status: 403, headers: NO_STORE_HEADERS }
+        );
+      }
+      decryptionValid = true;
     }
 
-    const allReports = await dbRepo.getAllReports();
+    const limit = Math.min(500, Math.max(1, parseNonNegativeInt(req.nextUrl.searchParams.get("limit"), 200)));
+    const offset = parseNonNegativeInt(req.nextUrl.searchParams.get("offset"), 0);
+
+    const [allReports, total] = await Promise.all([
+      dbRepo.getAllReports({ limit, offset }),
+      dbRepo.countReports(),
+    ]);
 
     const reports = allReports.map((d) => {
       let decryptedPhone = "";
       let decryptedNik = "";
       let decryptedAddress = "";
 
-      if (decryptPass && decryptPass === serverConfig.serverEncryptionKey) {
+      if (decryptionValid) {
         decryptedPhone = decryptServerData(d.encryptedPhone || "");
         decryptedNik = decryptServerData(d.encryptedNik || "");
         decryptedAddress = decryptServerData(d.encryptedAddress || "");
@@ -52,9 +66,15 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ reports });
-  } catch (error: any) {
+    return NextResponse.json(
+      { reports, decryptionValid, total },
+      { status: 200, headers: NO_STORE_HEADERS }
+    );
+  } catch (error) {
     console.error("Admin Reports Fetch Error:", error);
-    return NextResponse.json({ error: "Gagal memuat daftar laporan." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Gagal memuat daftar laporan." },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
   }
 }

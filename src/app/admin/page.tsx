@@ -13,7 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/utils";
+import { escapeCsvCell, formatDate } from "@/lib/utils";
 
 interface ReportItem {
   id: string;
@@ -31,8 +31,15 @@ interface ReportItem {
   decryptedAddress?: string;
 }
 
+interface AdminUser {
+  id?: string;
+  email: string;
+  name?: string | null;
+  role?: string;
+}
+
 export default function AdminPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -44,53 +51,60 @@ export default function AdminPage() {
   const [isDecrypted, setIsDecrypted] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
 
-  const fetchReports = useCallback(async (adminEmail: string, key?: string) => {
+  const fetchReports = useCallback(async (key?: string) => {
     setLoadingReports(true);
     try {
-      const headers: Record<string, string> = {
-        "x-admin-email": adminEmail,
-      };
+      const headers: Record<string, string> = {};
       if (key) headers["x-decrypt-key"] = key;
 
       const res = await fetch("/api/admin/reports", { headers });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setReports(data.reports || []);
+        const validDecryption = data.decryptionValid === true;
+        setIsDecrypted(validDecryption);
         if (key) {
-          setIsDecrypted(true);
-          toast.success("Data identitas pelapor berhasil didekripsi.");
+          if (validDecryption) {
+            toast.success("Data identitas pelapor berhasil didekripsi.");
+          } else {
+            toast.error(data.error || "Kunci dekripsi tidak valid.");
+          }
         }
       } else {
-        toast.error(data.error || "Gagal memuat laporan.");
+        if (key) setIsDecrypted(false);
+        toast.error(data.error || (key ? "Kunci dekripsi tidak valid." : "Gagal memuat laporan."));
       }
     } catch (err) {
       console.error(err);
+      if (key) setIsDecrypted(false);
       toast.error("Terjadi kesalahan jaringan.");
     } finally {
       setLoadingReports(false);
     }
   }, []);
 
-  const checkAdminSession = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (cancelled || !res.ok) return;
         const data = await res.json();
+        if (cancelled) return;
         if (data.user?.role === "ADMIN") {
           setUser(data.user);
-          fetchReports(data.user.email);
+          await fetchReports();
         } else if (data.user) {
           setUser(data.user); // Logged in but not admin
         }
+      } catch {
+        // Not logged in
       }
-    } catch {
-      // Not logged in
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [fetchReports]);
-
-  useEffect(() => {
-    checkAdminSession();
-  }, [checkAdminSession]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,9 +129,9 @@ export default function AdminPage() {
 
       setUser(data.user);
       toast.success(`Masuk sebagai ${data.user.email}`);
-      fetchReports(data.user.email);
-    } catch (err: any) {
-      setLoginError(err.message || "Periksa email dan kata sandi.");
+      fetchReports();
+    } catch (err: unknown) {
+      setLoginError(err instanceof Error ? err.message : "Periksa email dan kata sandi.");
     } finally {
       setLoginLoading(false);
     }
@@ -134,11 +148,10 @@ export default function AdminPage() {
   const handleUpdateStatus = async (ticketId: string, newStatus: string) => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/admin/reports/${ticketId}`, {
+      const res = await fetch(`/api/admin/reports/${encodeURIComponent(ticketId)}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-email": user.email || "",
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -158,8 +171,11 @@ export default function AdminPage() {
     }
   };
 
+  const filteredReports =
+    selectedStatus === "ALL" ? reports : reports.filter((r) => r.status === selectedStatus);
+
   const handleExportCsv = () => {
-    if (!reports.length) {
+    if (!filteredReports.length) {
       toast.error("Tidak ada data laporan untuk diekspor.");
       return;
     }
@@ -174,19 +190,22 @@ export default function AdminPage() {
       "Alamat",
       "Status",
       "Detail Kronologi",
-    ];
-    const rows = reports.map((r) => [
-      r.ticketId,
-      r.createdAt,
-      `"${r.websiteUrl}"`,
-      `"${r.category}"`,
-      r.isAnonymous ? "Anonim" : `"${r.reporterName} (${r.reporterEmail})"`,
-      r.decryptedNik ? `"${r.decryptedNik}"` : '""',
-      r.decryptedPhone ? `"${r.decryptedPhone}"` : '""',
-      r.decryptedAddress ? `"${r.decryptedAddress.replace(/"/g, '""')}"` : '""',
-      r.status,
-      `"${(r.details || "").replace(/"/g, '""')}"`,
-    ]);
+    ].map((cell) => escapeCsvCell(cell));
+
+    const rows = filteredReports.map((r) =>
+      [
+        r.ticketId,
+        r.createdAt,
+        r.websiteUrl,
+        r.category,
+        r.isAnonymous ? "Anonim" : `${r.reporterName} (${r.reporterEmail})`,
+        r.decryptedNik || "",
+        r.decryptedPhone || "",
+        r.decryptedAddress || "",
+        r.status,
+        r.details || "",
+      ].map((cell) => escapeCsvCell(cell))
+    );
 
     const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -197,11 +216,24 @@ export default function AdminPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     toast.success("File CSV berhasil diunduh.");
   };
 
-  const filteredReports =
-    selectedStatus === "ALL" ? reports : reports.filter((r) => r.status === selectedStatus);
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "SELESAI":
+        return "bg-emerald-950/80 text-emerald-300 border border-emerald-800";
+      case "DITOLAK":
+        return "bg-rose-950/80 text-rose-300 border border-rose-800";
+      case "DITINDAKLANJUTI":
+        return "bg-purple-950/80 text-purple-300 border border-purple-800";
+      case "DIVERIFIKASI":
+        return "bg-amber-950/80 text-amber-300 border border-amber-800";
+      default:
+        return "bg-cyan-950/80 text-cyan-300 border border-cyan-800";
+    }
+  };
 
   if (!user || user.role !== "ADMIN") {
     return (
@@ -341,7 +373,13 @@ export default function AdminPage() {
                 className="w-44 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:border-cyan-500"
               />
               <button
-                onClick={() => fetchReports(user.email || "", decryptKey)}
+                onClick={() => {
+                  if (!decryptKey.trim()) {
+                    toast.error("Masukkan kunci dekripsi AES terlebih dahulu.");
+                    return;
+                  }
+                  fetchReports(decryptKey);
+                }}
                 className="flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700 transition"
               >
                 {isDecrypted ? <Unlock className="h-3.5 w-3.5 text-emerald-400" /> : <Lock className="h-3.5 w-3.5" />}
@@ -414,15 +452,9 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                            r.status === "SELESAI"
-                              ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800"
-                              : r.status === "DITOLAK"
-                              ? "bg-rose-950/80 text-rose-300 border border-rose-800"
-                              : r.status === "DITINDAKLANJUTI"
-                              ? "bg-purple-950/80 text-purple-300 border border-purple-800"
-                              : "bg-cyan-950/80 text-cyan-300 border border-cyan-800"
-                          }`}
+                          className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${getStatusBadgeClass(
+                            r.status
+                          )}`}
                         >
                           {r.status}
                         </span>
