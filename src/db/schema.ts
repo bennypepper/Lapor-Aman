@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, boolean, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, jsonb, index, integer } from "drizzle-orm/pg-core";
 
 export interface StatusHistoryEntry {
   status: string;
@@ -49,7 +49,18 @@ export const reports = pgTable(
   ]
 );
 
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: varchar("key", { length: 191 }).primaryKey(),
+    count: integer("count").notNull(),
+    resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("rate_limits_reset_at_idx").on(table.resetAt)]
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
+export type RateLimit = typeof rateLimits.$inferSelect;

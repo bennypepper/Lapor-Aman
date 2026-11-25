@@ -36,7 +36,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [address, setAddress] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
-  const [turnstileActivated, setTurnstileActivated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +45,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const handleClose = useCallback(() => {
     setError(null);
     setTurnstileError(null);
-    setTurnstileActivated(false);
     setTurnstileToken(null);
     if (widgetIdRef.current && typeof window !== "undefined") {
       const turnstile = (window as TurnstileWindow).turnstile;
@@ -70,13 +68,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   }, [isOpen, handleClose]);
 
   // Activate Turnstile when user has filled email & password in register mode
-  const isRegisterFormFilled = email.trim().length >= 4 && password.length >= 8;
-
-  useEffect(() => {
-    if (isRegister && isRegisterFormFilled && !turnstileActivated) {
-      setTurnstileActivated(true);
-    }
-  }, [isRegister, isRegisterFormFilled, turnstileActivated]);
+  const turnstileActivated = isRegister && email.trim().length >= 4 && password.length >= 8;
 
   // Mount Turnstile widget smoothly once activated
   useEffect(() => {
@@ -86,7 +78,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     let isMounted = true;
     let attempts = 0;
     const MAX_ATTEMPTS = 50;
-    setTurnstileError(null);
 
     const renderTurnstile = () => {
       if (!isMounted) return;
@@ -424,7 +415,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
               setIsRegister(!isRegister);
               setError(null);
               setTurnstileError(null);
-              setTurnstileActivated(false);
               setTurnstileToken(null);
               if (widgetIdRef.current && typeof window !== "undefined") {
                 const turnstile = (window as TurnstileWindow).turnstile;

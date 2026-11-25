@@ -4,7 +4,7 @@ import { generateTicketId, isValidNIK, isValidPhone } from "@/lib/utils";
 import { encryptServerData } from "@/lib/crypto";
 import { dbRepo } from "@/db/repo";
 import { getSessionFromRequest } from "@/lib/auth";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
+import { checkRateLimitDistributed, getClientIp } from "@/lib/rate-limiter";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import {
   isValidHttpUrl,
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (originError) return originError;
 
     const ip = getClientIp(req);
-    const rate = checkRateLimit(`report:${ip}`, 10, 60 * 1000);
+    const rate = await checkRateLimitDistributed(`report:${ip}`, 10, 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: `Terlalu banyak pengiriman laporan. Coba lagi dalam ${rate.resetSeconds} detik.` },

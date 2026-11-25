@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { serverConfig } from "@/lib/server-config";
-import { checkRateLimit, checkPromptSafety, getClientIp } from "@/lib/rate-limiter";
+import { checkRateLimitDistributed, checkPromptSafety, getClientIp } from "@/lib/rate-limiter";
 import { parseJsonBody } from "@/lib/http";
 
 interface ChatHistoryItem {
@@ -56,7 +56,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req);
-    const rateCheck = checkRateLimit(`chat:${ip}`, 6, 60 * 1000);
+    const rateCheck = await checkRateLimitDistributed(`chat:${ip}`, 6, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         {
@@ -155,19 +155,32 @@ export async function POST(req: NextRequest) {
     }
 
     if (serverConfig.geminiApiKey) {
-      const genAI = new GoogleGenerativeAI(serverConfig.geminiApiKey);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        systemInstruction: SYSTEM_PROMPT,
-      });
+      const ai = new GoogleGenAI({ apiKey: serverConfig.geminiApiKey });
 
       const promptWithHistory =
         history.length > 0
           ? `${history.map((h) => `${h.role === "user" ? "Pengguna" : "Asisten"}: ${h.content}`).join("\n")}\nPengguna: ${message}`
           : message;
 
-      const result = await withTimeout(model.generateContent(promptWithHistory), AI_TIMEOUT_MS);
-      const reply = result.response.text();
+      const result = await withTimeout(
+        ai.models.generateContent({
+          model: serverConfig.geminiModel,
+          contents: promptWithHistory,
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            maxOutputTokens: 300,
+            temperature: 0.4,
+          },
+        }),
+        AI_TIMEOUT_MS
+      );
+      const reply = result.text?.trim();
+      if (!reply) {
+        return NextResponse.json(
+          { error: "Asisten AI tidak mengembalikan jawaban yang valid." },
+          { status: 502 }
+        );
+      }
 
       return NextResponse.json(
         { reply },

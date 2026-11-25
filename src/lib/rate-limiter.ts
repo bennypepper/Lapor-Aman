@@ -1,10 +1,21 @@
+import { sql } from "drizzle-orm";
+import { db } from "@/db";
+import { rateLimits } from "@/db/schema";
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;
 }
 
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetSeconds: number;
+}
+
 const MAX_STORE_ENTRIES = 10_000;
 const ipStore = new Map<string, RateLimitEntry>();
+let warnedDbFallback = false;
 
 // Periodic cleanup of stale entries every 5 minutes (unref'd so it never blocks shutdown)
 if (typeof setInterval !== "undefined") {
@@ -23,6 +34,7 @@ if (typeof setInterval !== "undefined") {
 
 export function resetRateLimiter(): void {
   ipStore.clear();
+  warnedDbFallback = false;
 }
 
 export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
@@ -59,13 +71,13 @@ function evictIfNeeded(now: number): void {
 }
 
 /**
- * Checks if a given rate-limit bucket key is within its request quota.
+ * Synchronous process-local rate limit check (used directly in dev/tests and as fallback).
  */
 export function checkRateLimit(
   key: string,
   maxRequests: number = 6,
   windowMs: number = 60 * 1000
-): { allowed: boolean; remaining: number; resetSeconds: number } {
+): RateLimitResult {
   const now = Date.now();
   const cleanKey = key || "unknown_key";
   const entry = ipStore.get(cleanKey);
@@ -93,6 +105,68 @@ export function checkRateLimit(
   entry.count += 1;
   const resetSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
   return { allowed: true, remaining: Math.max(0, maxRequests - entry.count), resetSeconds };
+}
+
+/**
+ * Distributed rate limiter backed by Neon PostgreSQL (`rate_limits` table) when
+ * `DATABASE_URL` is configured, gracefully falling back to the bounded in-memory
+ * store in local dev/tests or if the migration has not been pushed yet.
+ */
+export async function checkRateLimitDistributed(
+  key: string,
+  maxRequests: number = 6,
+  windowMs: number = 60 * 1000
+): Promise<RateLimitResult> {
+  const cleanKey = (key || "unknown_key").slice(0, 191);
+  if (!db) {
+    return checkRateLimit(cleanKey, maxRequests, windowMs);
+  }
+
+  try {
+    const now = new Date();
+    const nextResetAt = new Date(now.getTime() + windowMs);
+
+    const rows = await db
+      .insert(rateLimits)
+      .values({
+        key: cleanKey,
+        count: 1,
+        resetAt: nextResetAt,
+      })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: {
+          count: sql`CASE WHEN ${rateLimits.resetAt} <= NOW() THEN 1 ELSE ${rateLimits.count} + 1 END`,
+          resetAt: sql`CASE WHEN ${rateLimits.resetAt} <= NOW() THEN EXCLUDED.reset_at ELSE ${rateLimits.resetAt} END`,
+        },
+      })
+      .returning({ count: rateLimits.count, resetAt: rateLimits.resetAt });
+
+    const row = rows[0];
+    if (!row) {
+      return checkRateLimit(cleanKey, maxRequests, windowMs);
+    }
+
+    const resetMs = new Date(row.resetAt).getTime();
+    const resetSeconds = Math.max(1, Math.ceil((resetMs - Date.now()) / 1000));
+    if (row.count > maxRequests) {
+      return { allowed: false, remaining: 0, resetSeconds };
+    }
+    return {
+      allowed: true,
+      remaining: Math.max(0, maxRequests - row.count),
+      resetSeconds,
+    };
+  } catch (err) {
+    if (!warnedDbFallback) {
+      warnedDbFallback = true;
+      console.warn(
+        "Distributed rate_limits table unavailable; falling back to in-memory limiter:",
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+    return checkRateLimit(cleanKey, maxRequests, windowMs);
+  }
 }
 
 /**

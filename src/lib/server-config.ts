@@ -28,10 +28,13 @@ export const serverConfig = {
     return (process.env.OPENROUTER_API_KEY || "").trim();
   },
   get openRouterModel(): string {
-    return (process.env.OPENROUTER_MODEL || "google/gemini-3.5-flash-lite").trim();
+    return (process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash-lite").trim();
   },
   get geminiApiKey(): string {
     return (process.env.GEMINI_API_KEY || "").trim();
+  },
+  get geminiModel(): string {
+    return (process.env.GEMINI_MODEL || "gemini-2.5-flash").trim();
   },
   get jwtSecret(): string {
     return resolveSecret("JWT_SECRET", DEV_JWT_SECRET);

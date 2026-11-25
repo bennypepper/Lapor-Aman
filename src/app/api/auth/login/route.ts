@@ -7,7 +7,7 @@ import {
   resolveEffectiveRole,
   SessionUser,
 } from "@/lib/auth";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
+import { checkRateLimitDistributed, getClientIp } from "@/lib/rate-limiter";
 import { NO_STORE_HEADERS, parseJsonBody, verifySameOrigin } from "@/lib/http";
 
 // Precomputed valid bcrypt hash used to equalize response time when user is not found
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     if (originError) return originError;
 
     const ip = getClientIp(req);
-    const ipRate = checkRateLimit(`login:ip:${ip}`, 10, 60 * 1000);
+    const ipRate = await checkRateLimitDistributed(`login:ip:${ip}`, 10, 60 * 1000);
     if (!ipRate.allowed) {
       return NextResponse.json(
         { error: `Terlalu banyak percobaan masuk. Coba lagi dalam ${ipRate.resetSeconds} detik.` },
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const emailRate = checkRateLimit(`login:email:${cleanEmail}`, 10, 60 * 1000);
+    const emailRate = await checkRateLimitDistributed(`login:email:${cleanEmail}`, 10, 60 * 1000);
     if (!emailRate.allowed) {
       return NextResponse.json(
         { error: `Terlalu banyak percobaan masuk untuk akun ini. Coba lagi dalam ${emailRate.resetSeconds} detik.` },

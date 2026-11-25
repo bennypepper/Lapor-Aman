@@ -10,7 +10,7 @@ import {
   SessionUser,
 } from "@/lib/auth";
 import { isValidNIK, isValidPhone } from "@/lib/utils";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
+import { checkRateLimitDistributed, getClientIp } from "@/lib/rate-limiter";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { NO_STORE_HEADERS, parseJsonBody, verifySameOrigin } from "@/lib/http";
 
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     if (originError) return originError;
 
     const ip = getClientIp(req);
-    const rate = checkRateLimit(`register:${ip}`, 5, 60 * 1000);
+    const rate = await checkRateLimitDistributed(`register:${ip}`, 5, 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: `Terlalu banyak percobaan pendaftaran. Coba lagi dalam ${rate.resetSeconds} detik.` },

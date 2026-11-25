@@ -15,7 +15,7 @@ export default function ChatDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: "welcome",
       sender: "bot",
@@ -27,18 +27,12 @@ Ada yang bisa saya bantu hari ini? Anda dapat menanyakan tentang:
 * Edukasi seputar bahaya judi online
 
 Silakan sampaikan pertanyaan atau laporan Anda.`,
-      time: "",
+      time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const now = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-    setMessages((prev) =>
-      prev.map((m) => (m.id === "welcome" && !m.time ? { ...m, time: now } : m))
-    );
-  }, []);
+  const msgCounterRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -60,7 +54,7 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
 
     const time = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     const userMsg: Message = {
-      id: `user-${Date.now()}`,
+      id: `user-${++msgCounterRef.current}`,
       sender: "user",
       text,
       time,
@@ -82,7 +76,7 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
         setMessages((prev) => [
           ...prev,
           {
-            id: `bot-err-${Date.now()}`,
+            id: `bot-err-${++msgCounterRef.current}`,
             sender: "bot",
             text: data.error || "Maaf, layanan asisten sedang mengalami gangguan.",
             time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
@@ -92,7 +86,7 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
       }
 
       const botMsg: Message = {
-        id: `bot-${Date.now()}`,
+        id: `bot-${++msgCounterRef.current}`,
         sender: "bot",
         text: data.reply || "Maaf, tidak dapat memproses jawaban saat ini.",
         time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
@@ -102,7 +96,7 @@ Silakan sampaikan pertanyaan atau laporan Anda.`,
       setMessages((prev) => [
         ...prev,
         {
-          id: `bot-err-${Date.now()}`,
+          id: `bot-err-${++msgCounterRef.current}`,
           sender: "bot",
           text: "Terjadi gangguan jaringan saat menghubungi asisten AI.",
           time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),

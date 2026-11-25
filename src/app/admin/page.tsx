@@ -83,26 +83,28 @@ export default function AdminPage() {
     }
   }, []);
 
-  const checkAdminSession = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (cancelled || !res.ok) return;
         const data = await res.json();
+        if (cancelled) return;
         if (data.user?.role === "ADMIN") {
           setUser(data.user);
-          fetchReports();
+          await fetchReports();
         } else if (data.user) {
           setUser(data.user); // Logged in but not admin
         }
+      } catch {
+        // Not logged in
       }
-    } catch {
-      // Not logged in
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [fetchReports]);
-
-  useEffect(() => {
-    checkAdminSession();
-  }, [checkAdminSession]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

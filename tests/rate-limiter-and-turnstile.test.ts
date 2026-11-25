@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   checkRateLimit,
+  checkRateLimitDistributed,
   getClientIp,
   resetRateLimiter,
 } from "@/lib/rate-limiter";
@@ -77,6 +78,15 @@ describe("rate-limiter", () => {
       const res = checkRateLimit(`cap:ip-${i}`, 5, 60_000);
       expect(res.allowed).toBe(true);
     }
+  });
+
+  it("checkRateLimitDistributed falls back to local limiter cleanly when db is null", async () => {
+    const longKey = `dist:${"x".repeat(250)}`;
+    expect((await checkRateLimitDistributed(longKey, 2, 60_000)).allowed).toBe(true);
+    expect((await checkRateLimitDistributed(longKey, 2, 60_000)).allowed).toBe(true);
+    const blocked = await checkRateLimitDistributed(longKey, 2, 60_000);
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.remaining).toBe(0);
   });
 });
 

@@ -54,18 +54,18 @@ function withLocalLock<T>(fn: () => Promise<T> | T): Promise<T> {
 
 function ensureLocalDir(dbPath: string): void {
   const dir = path.dirname(dbPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+    fs.mkdirSync(/*turbopackIgnore: true*/ dir, { recursive: true });
   }
 }
 
 function readLocalStore(): LocalStore {
   assertLocalStoreAllowed();
   const dbPath = getLocalDbPath();
-  if (!fs.existsSync(dbPath)) {
+  if (!fs.existsSync(/*turbopackIgnore: true*/ dbPath)) {
     return { users: [], reports: [] };
   }
-  const raw = fs.readFileSync(dbPath, "utf8");
+  const raw = fs.readFileSync(/*turbopackIgnore: true*/ dbPath, "utf8");
   if (!raw.trim()) {
     return { users: [], reports: [] };
   }

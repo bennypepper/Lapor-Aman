@@ -24,8 +24,8 @@ interface TrackingViewProps {
 }
 
 export default function TrackingView({ selectedTicketId }: TrackingViewProps) {
-  const [ticketQuery, setTicketQuery] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [ticketQuery, setTicketQuery] = useState(selectedTicketId ?? "");
+  const [loading, setLoading] = useState(Boolean(selectedTicketId));
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<ReportData | null>(null);
 
@@ -54,10 +54,36 @@ export default function TrackingView({ selectedTicketId }: TrackingViewProps) {
   }, []);
 
   useEffect(() => {
-    if (!selectedTicketId) return;
-    setTicketQuery(selectedTicketId);
-    void lookupTicket(selectedTicketId);
-  }, [selectedTicketId, lookupTicket]);
+    const cleanId = selectedTicketId?.trim();
+    if (!cleanId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/track/${encodeURIComponent(cleanId)}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(data.error || "Laporan tidak ditemukan.");
+          setReport(null);
+        } else {
+          setError(null);
+          setReport(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Gagal menghubungi server pelacakan.");
+          setReport(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTicketId]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();

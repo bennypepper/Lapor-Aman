@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbRepo } from "@/db/repo";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
+import { checkRateLimitDistributed, getClientIp } from "@/lib/rate-limiter";
 
 export async function GET(
   req: NextRequest,
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const ip = getClientIp(req);
-    const rate = checkRateLimit(`track:${ip}`, 30, 60 * 1000);
+    const rate = await checkRateLimitDistributed(`track:${ip}`, 30, 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: `Terlalu banyak permintaan pelacakan. Coba lagi dalam ${rate.resetSeconds} detik.` },

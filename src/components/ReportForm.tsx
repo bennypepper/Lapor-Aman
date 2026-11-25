@@ -54,19 +54,11 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
   const [copied, setCopied] = useState(false);
   const [successData, setSuccessData] = useState<ReceiptData | null>(null);
 
-  const [turnstileActivated, setTurnstileActivated] = useState(false);
-
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
   // Activate Turnstile only when user fills mandatory fields (URL & details)
-  const isFormFilled = websiteUrl.trim().length >= 3 && details.trim().length >= 5;
-
-  useEffect(() => {
-    if (isFormFilled && !turnstileActivated) {
-      setTurnstileActivated(true);
-    }
-  }, [isFormFilled, turnstileActivated]);
+  const turnstileActivated = websiteUrl.trim().length >= 3 && details.trim().length >= 5;
 
   // Mount Turnstile widget smoothly once activated
   useEffect(() => {
@@ -76,7 +68,6 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
     let isMounted = true;
     let attempts = 0;
     const MAX_ATTEMPTS = 50;
-    setTurnstileError(null);
 
     const renderTurnstile = () => {
       if (!isMounted) return;
@@ -300,7 +291,6 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
       // Clear form inputs and reset turnstile
       setWebsiteUrl("");
       setDetails("");
-      setTurnstileActivated(false);
       setTurnstileToken(null);
       setTurnstileError(null);
       if (widgetIdRef.current && typeof window !== "undefined") {
@@ -377,7 +367,6 @@ export default function ReportForm({ user, onSuccess }: ReportFormProps) {
             <button
               onClick={() => {
                 setSuccessData(null);
-                setTurnstileActivated(false);
                 setTurnstileToken(null);
                 setTurnstileError(null);
                 widgetIdRef.current = null;
