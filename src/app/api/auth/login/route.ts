@@ -1,28 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { dbRepo } from "@/db/repo";
-import { serverConfig } from "@/lib/config";
-import { signSessionToken, attachSessionCookie, SessionUser } from "@/lib/auth";
+import {
+  signSessionToken,
+  attachSessionCookie,
+  resolveEffectiveRole,
+  SessionUser,
+} from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
+import { NO_STORE_HEADERS, parseJsonBody, verifySameOrigin } from "@/lib/http";
+
+// Precomputed valid bcrypt hash used to equalize response time when user is not found
+const DUMMY_BCRYPT_HASH = "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { email, password } = body;
+    const originError = verifySameOrigin(req);
+    if (originError) return originError;
 
-    if (!email || !password) {
+    const ip = getClientIp(req);
+    const ipRate = checkRateLimit(`login:ip:${ip}`, 10, 60 * 1000);
+    if (!ipRate.allowed) {
+      return NextResponse.json(
+        { error: `Terlalu banyak percobaan masuk. Coba lagi dalam ${ipRate.resetSeconds} detik.` },
+        {
+          status: 429,
+          headers: { ...NO_STORE_HEADERS, "Retry-After": String(ipRate.resetSeconds) },
+        }
+      );
+    }
+
+    const parsed = await parseJsonBody<{ email?: unknown; password?: unknown }>(req);
+    if (!parsed.ok) return parsed.response;
+
+    const { email, password } = parsed.data;
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !email.trim() ||
+      !password ||
+      email.length > 255 ||
+      password.length > 128
+    ) {
       return NextResponse.json(
         { error: "Email dan kata sandi wajib diisi." },
-        { status: 400 }
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
     const cleanEmail = email.toLowerCase().trim();
+    const emailRate = checkRateLimit(`login:email:${cleanEmail}`, 10, 60 * 1000);
+    if (!emailRate.allowed) {
+      return NextResponse.json(
+        { error: `Terlalu banyak percobaan masuk untuk akun ini. Coba lagi dalam ${emailRate.resetSeconds} detik.` },
+        {
+          status: 429,
+          headers: { ...NO_STORE_HEADERS, "Retry-After": String(emailRate.resetSeconds) },
+        }
+      );
+    }
+
     const user = await dbRepo.getUserByEmail(cleanEmail);
 
     if (!user) {
+      await bcrypt.compare(password, DUMMY_BCRYPT_HASH);
       return NextResponse.json(
         { error: "Email atau kata sandi tidak cocok." },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -30,16 +74,11 @@ export async function POST(req: NextRequest) {
     if (!isMatch) {
       return NextResponse.json(
         { error: "Email atau kata sandi tidak cocok." },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
-    // Promote to ADMIN if configured in environment admin emails
-    let role = user.role as "USER" | "ADMIN";
-    if (serverConfig.adminEmails.includes(cleanEmail) && role !== "ADMIN") {
-      role = "ADMIN";
-    }
-
+    const role = resolveEffectiveRole(user.email, user.role);
     const sessionPayload: SessionUser = {
       id: user.id,
       email: user.email,
@@ -49,18 +88,18 @@ export async function POST(req: NextRequest) {
 
     const token = await signSessionToken(sessionPayload);
 
-    const response = NextResponse.json({
-      success: true,
-      user: sessionPayload,
-    });
+    const response = NextResponse.json(
+      { success: true, user: sessionPayload },
+      { status: 200, headers: NO_STORE_HEADERS }
+    );
 
     attachSessionCookie(response, token);
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Login Error:", error);
     return NextResponse.json(
       { error: "Terjadi gangguan sistem saat masuk. Silakan coba lagi." },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }

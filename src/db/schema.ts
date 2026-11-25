@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, jsonb, index } from "drizzle-orm/pg-core";
 
 export interface StatusHistoryEntry {
   status: string;
@@ -20,25 +20,34 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const reports = pgTable("reports", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  ticketId: varchar("ticket_id", { length: 64 }).notNull().unique(),
-  userId: varchar("user_id", { length: 64 }),
-  websiteUrl: text("website_url").notNull(),
-  category: varchar("category", { length: 128 }).notNull().default("Situs Taruhan / Casino"),
-  details: text("details").notNull(),
-  evidenceUrl: text("evidence_url"),
-  isAnonymous: boolean("is_anonymous").default(false).notNull(),
-  reporterName: varchar("reporter_name", { length: 255 }).default("Anonim").notNull(),
-  reporterEmail: varchar("reporter_email", { length: 255 }).default(""),
-  encryptedPhone: text("encrypted_phone").default(""),
-  encryptedNik: text("encrypted_nik").default(""),
-  encryptedAddress: text("encrypted_address").default(""),
-  status: varchar("status", { length: 64 }).default("BARU").notNull(),
-  statusHistory: jsonb("status_history").$type<StatusHistoryEntry[]>().default([]).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const reports = pgTable(
+  "reports",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    ticketId: varchar("ticket_id", { length: 64 }).notNull().unique(),
+    userId: varchar("user_id", { length: 64 }),
+    websiteUrl: text("website_url").notNull(),
+    category: varchar("category", { length: 128 }).notNull().default("Situs Taruhan / Casino"),
+    details: text("details").notNull(),
+    evidenceUrl: text("evidence_url"),
+    isAnonymous: boolean("is_anonymous").default(false).notNull(),
+    reporterName: varchar("reporter_name", { length: 255 }).default("Anonim").notNull(),
+    reporterEmail: varchar("reporter_email", { length: 255 }).default(""),
+    encryptedPhone: text("encrypted_phone").default(""),
+    encryptedNik: text("encrypted_nik").default(""),
+    encryptedAddress: text("encrypted_address").default(""),
+    status: varchar("status", { length: 64 }).default("BARU").notNull(),
+    statusHistory: jsonb("status_history").$type<StatusHistoryEntry[]>().default([]).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("reports_user_id_idx").on(table.userId),
+    index("reports_reporter_email_idx").on(table.reporterEmail),
+    index("reports_created_at_idx").on(table.createdAt),
+    index("reports_status_created_at_idx").on(table.status, table.createdAt),
+  ]
+);
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

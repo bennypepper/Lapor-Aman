@@ -1,95 +1,134 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { dbRepo } from "@/db/repo";
 import { encryptServerData } from "@/lib/crypto";
-import { serverConfig } from "@/lib/config";
-import { signSessionToken, attachSessionCookie, SessionUser } from "@/lib/auth";
+import {
+  signSessionToken,
+  attachSessionCookie,
+  resolveEffectiveRole,
+  SessionUser,
+} from "@/lib/auth";
 import { isValidNIK, isValidPhone } from "@/lib/utils";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
+import { verifyTurnstileToken } from "@/lib/turnstile";
+import { NO_STORE_HEADERS, parseJsonBody, verifySameOrigin } from "@/lib/http";
+
+function isDuplicateError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as { code?: string; cause?: { code?: string } };
+  return err.code === "23505" || err.cause?.code === "23505";
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { email, password, fullname, nik, phone, address, turnstileToken } = body;
+    const originError = verifySameOrigin(req);
+    if (originError) return originError;
 
-    // Verify Turnstile CAPTCHA if secret key is configured
-    if (serverConfig.turnstileSecretKey) {
-      if (!turnstileToken) {
-        return NextResponse.json(
-          { error: "Verifikasi CAPTCHA wajib diselesaikan untuk pendaftaran akun baru." },
-          { status: 400 }
-        );
-      }
-
-      const verifyFormData = new URLSearchParams();
-      verifyFormData.append("secret", serverConfig.turnstileSecretKey);
-      verifyFormData.append("response", turnstileToken);
-
-      const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-        method: "POST",
-        body: verifyFormData,
-      });
-      const verifyData = await verifyRes.json();
-      if (!verifyData.success) {
-        return NextResponse.json(
-          { error: "Validasi CAPTCHA gagal. Silakan coba kembali." },
-          { status: 400 }
-        );
-      }
+    const ip = getClientIp(req);
+    const rate = checkRateLimit(`register:${ip}`, 5, 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: `Terlalu banyak percobaan pendaftaran. Coba lagi dalam ${rate.resetSeconds} detik.` },
+        {
+          status: 429,
+          headers: { ...NO_STORE_HEADERS, "Retry-After": String(rate.resetSeconds) },
+        }
+      );
     }
 
-    if (!email || !password || !fullname || !nik || !phone || !address) {
+    const parsed = await parseJsonBody<{
+      email?: unknown;
+      password?: unknown;
+      fullname?: unknown;
+      nik?: unknown;
+      phone?: unknown;
+      address?: unknown;
+      turnstileToken?: unknown;
+    }>(req);
+    if (!parsed.ok) return parsed.response;
+
+    const { email, password, fullname, nik, phone, address, turnstileToken } = parsed.data;
+
+    const turnstile = await verifyTurnstileToken(turnstileToken, ip);
+    if (!turnstile.ok) {
+      return NextResponse.json(
+        { error: turnstile.error },
+        { status: turnstile.status, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      typeof fullname !== "string" ||
+      typeof nik !== "string" ||
+      typeof phone !== "string" ||
+      typeof address !== "string" ||
+      !email.trim() ||
+      !password ||
+      !fullname.trim() ||
+      !nik.trim() ||
+      !phone.trim() ||
+      !address.trim()
+    ) {
       return NextResponse.json(
         { error: "Semua data profil dan identitas wajib diisi." },
-        { status: 400 }
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    if (!cleanEmail.includes("@") || cleanEmail.length < 5) {
-      return NextResponse.json({ error: "Format email tidak valid." }, { status: 400 });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 255) {
+      return NextResponse.json(
+        { error: "Format email tidak valid." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8 || password.length > 72) {
       return NextResponse.json(
-        { error: "Kata sandi minimal harus 6 karakter." },
-        { status: 400 }
+        { error: "Kata sandi harus terdiri dari 8 hingga 72 karakter." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    if (fullname.trim().length > 255 || address.trim().length > 500) {
+      return NextResponse.json(
+        { error: "Nama lengkap atau alamat melebihi batas panjang karakter." },
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
     if (!isValidNIK(nik)) {
       return NextResponse.json(
         { error: "NIK harus terdiri dari tepat 16 digit angka." },
-        { status: 400 }
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
     if (!isValidPhone(phone)) {
       return NextResponse.json(
         { error: "Nomor telepon/ponsel tidak valid." },
-        { status: 400 }
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
-    // Check if user already exists
     const existing = await dbRepo.getUserByEmail(cleanEmail);
     if (existing) {
       return NextResponse.json(
         { error: "Email sudah terdaftar. Silakan masuk menggunakan akun Anda." },
-        { status: 409 }
+        { status: 409, headers: NO_STORE_HEADERS }
       );
     }
 
-    // Hash password securely with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
-
-    // Encrypt sensitive PII server-side
     const encryptedNik = encryptServerData(nik.trim());
     const encryptedPhone = encryptServerData(phone.trim());
     const encryptedAddress = encryptServerData(address.trim());
 
-    // Check if email is listed as administrator
-    const role = serverConfig.adminEmails.includes(cleanEmail) ? "ADMIN" : "USER";
-    const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const role = resolveEffectiveRole(cleanEmail, "USER");
+    const userId = `usr_${crypto.randomUUID()}`;
 
     const user = await dbRepo.createUser({
       id: userId,
@@ -106,23 +145,29 @@ export async function POST(req: NextRequest) {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role as "USER" | "ADMIN",
+      role: resolveEffectiveRole(user.email, user.role),
     };
 
     const token = await signSessionToken(sessionPayload);
 
-    const response = NextResponse.json({
-      success: true,
-      user: sessionPayload,
-    });
+    const response = NextResponse.json(
+      { success: true, user: sessionPayload },
+      { status: 200, headers: NO_STORE_HEADERS }
+    );
 
     attachSessionCookie(response, token);
     return response;
-  } catch (error: any) {
+  } catch (error) {
+    if (isDuplicateError(error)) {
+      return NextResponse.json(
+        { error: "Email sudah terdaftar. Silakan masuk menggunakan akun Anda." },
+        { status: 409, headers: NO_STORE_HEADERS }
+      );
+    }
     console.error("Registration Error:", error);
     return NextResponse.json(
       { error: "Terjadi gangguan sistem saat pendaftaran akun. Silakan coba lagi." },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }
